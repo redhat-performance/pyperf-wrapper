@@ -1,0 +1,9 @@
+#!/bin/bash
+
+for iteration in $(seq 1 1 $2); do
+	python3 pyperformance run --append python_results/py38_${1}_${3}.json --benchmarks ${1} --rigorous
+done
+
+pushd python_results
+python3 -m pyperf dump  py38_${1}_${3}.json | grep '^-' | cut -d':' -f2 | cut -d' ' -f2 > ${1}_values_${3}
+popd

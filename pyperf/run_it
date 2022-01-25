@@ -1,0 +1,29 @@
+#!/bin/bash
+git clone https://github.com/python/pyperformance
+cd pyperformance
+git checkout tags/1.0.3
+dnf install python36 python36-devel
+dnf install python38 python38-devel
+pip3 install psutil
+pip3 install packaging
+pip3 install pyparsing
+pip3 install pyperf
+pip3 install toml
+
+test_list=`python3 pyperformance list | grep "^-" | cut -d' ' -f 2`
+cpus=`cat /proc/cpuinfo | grep processor | wc -l`
+echo $test_list
+declare -a pids
+mkdir python_results
+for test_name in $test_list; do
+	echo here $test_name
+	pindex=0
+	for run_number in $(seq 1 1 $cpus); do
+		./run_py_test $test_name 5 $run_number &
+		pids[${pindex}]=$!
+		let "pindex=$pindex+1"
+	done
+	for pid in ${pids[*]}; do
+		wait $pid
+        done
+done
