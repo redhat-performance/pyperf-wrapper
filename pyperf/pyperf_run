@@ -1,29 +1,188 @@
 #!/bin/bash
+
+usage()
+{
+	echo "$1 Usage:"
+	source test_tools/general_setup --usage
+        exit 0
+}
+
+install_tools()
+{
+	show_usage=0
+	#
+	# Clone the repo that contains the common code and tools
+	#
+	tools_git=https://github.com/dvalinrh/test_tools
+
+	found=0
+	for arg in "$@"; do
+		if [ $found -eq 1 ]; then
+			tools_git=$arg
+			found=0
+		fi
+		if [[ $arg == "--tools_git" ]]; then
+			found=1
+		fi
+		#
+		# We do the usage check here, as we do not want to be calling
+		# the common parsers then checking for usage here.  Doing so will
+		# result in the script exiting with out giving the test options.
+		#
+		if [[ $arg == "--usage" ]]; then
+			show_usage=1
+		fi
+	done
+
+	#
+	# Check to see if the test tools directory exists.  If it does, we do not need to
+	# clone the repo.
+	#
+	if [ ! -d "test_tools" ]; then
+		git clone $tools_git
+		if [ $? -ne 0 ]; then
+			echo pulling git $tools_git failed.
+			exit
+		fi
+	fi
+
+	if [ $show_usage -eq 1 ]; then
+		usage $1
+	fi
+}
+
+generate_csv_file()
+{
+	re='^[0-9]+$'
+	instance=0
+	float=0
+	ivalue=0
+	fvalue=0.0
+	test_name=""
+	unit=""
+	while IFS= read -r line
+	do
+		if [[ $line == *"----"* ]]; then
+			if [ $instance -ne 0 ]; then
+				if [ $float -eq 1 ]; then
+					value=`echo "scaling=2;${fvalue}/${instance}" | bc -l`
+					printf "%s:%10.2f:%s\n" $test_name $value $unit | sed "s/ //g" >> ${1}.csv
+				else
+					value=`echo "${ivalue}/${instance}" | bc`
+					echo ${test_name}:${value}:${unit} >> ${1}.csv
+				fi
+			fi
+			ivalue=0
+			fvalue=0
+			test_name=$prior
+			instance=0
+			float=0
+		fi
+		prior=$line
+		if [[ $line == *"calibrate"* ]]; then
+			continue
+		fi
+		if [[ $line == *"warmup"* ]]; then
+			continue
+		fi
+		value=`echo $line | cut -d' ' -f4 | sed "s/\.//g"`
+		if ! [[ $value =~ $re ]] ; then
+			continue
+		fi
+		let "instance=${instance}+1"
+		value=`echo $line | cut -d' ' -f4`
+		unit=`echo $line | cut -d' ' -f5`
+		if [[ $value == *"."* ]]; then
+			float=1
+			fvalue=`echo "${fvalue}+${value}"| bc -l`
+		else
+			float=0
+			ivalue=`echo "${ivalue}+${value}"| bc`
+		fi
+	done < "${1}.results"
+}
+
+#
+# Variables set by general setup.
+#
+# TOOLS_BIN: points to the tool directory
+# to_home_root: home directory
+# to_configuration: configuration information
+# to_times_to_run: number of times to run the test
+# to_pbench: Run the test via pbench
+# to_pbench_copy: Copy the data to the pbench repository, not move_it.
+# to_puser: User running pbench
+# to_run_label: Label for the run
+# to_user: User on the test system running the test
+# to_sys_type: for results info, basically aws, azure or local
+# to_sysname: name of the system
+# to_tuned_setting: tuned setting
+#
+
+install_tools $0
+
+test_name_run="coremark_pro"
+arguments="$@"
+chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
+run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+
+
+source test_tools/general_setup "$@"
+
+NO_ARGUMENTS=(
+        "powers_2"
+        "usage"
+)
+
+# read arguments
+opts=$(getopt \
+        --longoptions "$(printf "%s," "${NO_ARGUMENTS[@]}")" \
+        --name "$(basename "$0")" \
+        --options "h" \
+        -- "$@"
+)
+
+eval set --$opts
+
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+		--usage)
+			usage $0
+		;;
+		-h)
+			usage $0
+		;;
+		--)
+			break
+		;;
+		*)
+			echo option not found $1
+			usage $0
+		;;
+	esac
+done
+
+rm -rf pyperformance
 git clone https://github.com/python/pyperformance
 cd pyperformance
-git checkout tags/1.0.3
-dnf install python36 python36-devel
-dnf install python38 python38-devel
+git checkout tags/1.0.4
+dnf install -y python36 python36-devel
+dnf install -y python38 python38-devel
 pip3 install psutil
 pip3 install packaging
 pip3 install pyparsing
 pip3 install pyperf
 pip3 install toml
 
-test_list=`python3 pyperformance list | grep "^-" | cut -d' ' -f 2`
 cpus=`cat /proc/cpuinfo | grep processor | wc -l`
-echo $test_list
-declare -a pids
+cous=1
 mkdir python_results
-for test_name in $test_list; do
-	echo here $test_name
-	pindex=0
-	for run_number in $(seq 1 1 $cpus); do
-		./run_py_test $test_name 5 $run_number &
-		pids[${pindex}]=$!
-		let "pindex=$pindex+1"
-	done
-	for pid in ${pids[*]}; do
-		wait $pid
-        done
-done
+
+pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
+pwd > /tmp/dave_debug
+echo python3 -m pyperformance run --output  ${pyresults}.json >> /tmp/dave_debug
+python3 -m pyperformance run --output  ${pyresults}.json
+echo python3 -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
+python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results
+
+generate_csv_file ${pyresults}
