@@ -121,7 +121,7 @@ generate_csv_file()
 
 install_tools $0
 
-test_name_run="coremark_pro"
+test_name_run="pyperf"
 arguments="$@"
 chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
@@ -186,3 +186,23 @@ echo python3 -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
 python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results
 
 generate_csv_file ${pyresults}
+
+#
+# Process the data.
+#
+if [ $to_pbench -eq 1 ]; then
+	results_prefix=$to_puser"_instance_"$to_configuration
+
+	dir=`ls -rtd /var/lib/pbench-agent/pyperf* | tail -1`
+	cd $dir
+else
+	RESULTSDIR=results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
+	mkdir /tmp/${RESULTSDIR}
+	cp python_results/* /tmp/${RESULTSDIR}
+	cd /tmp
+	rm results_${test_name_run}_${to_tuned_setting}
+	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
+	mv  ${test_name_run}_*.out ${RESULTSDIR}
+	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
+	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
+fi
