@@ -162,39 +162,49 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-rm -rf pyperformance
-git clone https://github.com/python/pyperformance
-cd pyperformance
-git checkout tags/1.0.4
-dnf install -y python36 python36-devel
-dnf install -y python38 python38-devel
-pip3 install psutil
-pip3 install packaging
-pip3 install pyparsing
-pip3 install pyperf
-pip3 install toml
 
-cpus=`cat /proc/cpuinfo | grep processor | wc -l`
-cous=1
-mkdir python_results
+if [ $to_pbench -eq 0 ]; then
+	rm -rf pyperformance
+	git clone https://github.com/python/pyperformance
+	cd pyperformance
+	git checkout tags/1.0.4
+	dnf install -y python36 python36-devel
+	dnf install -y python38 python38-devel
+	pip3 install psutil
+	pip3 install packaging
+	pip3 install pyparsing
+	pip3 install pyperf
+	pip3 install toml
 
-pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
-pwd > /tmp/dave_debug
-echo python3 -m pyperformance run --output  ${pyresults}.json >> /tmp/dave_debug
-python3 -m pyperformance run --output  ${pyresults}.json
-echo python3 -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
-python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results
+	cpus=`cat /proc/cpuinfo | grep processor | wc -l`
+	cous=1
+	mkdir python_results
+	
+	pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
+	pwd > /tmp/dave_debug
+	echo python3 -m pyperformance run --output  ${pyresults}.json >> /tmp/dave_debug
+	python3 -m pyperformance run --output  ${pyresults}.json
+	echo python3 -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
+	python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results
 
-generate_csv_file ${pyresults}
+	generate_csv_file ${pyresults}
+else
+	source ~/.bashrc
+	arguments="${arguments} --test_iterations ${to_times_to_run}"
+	echo $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
+	exit
+	$TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
+fi
+
 
 #
 # Process the data.
 #
 if [ $to_pbench -eq 1 ]; then
 	results_prefix=$to_puser"_instance_"$to_configuration
-
 	dir=`ls -rtd /var/lib/pbench-agent/pyperf* | tail -1`
 	cd $dir
+	echo $dir > /tmp/pbench_debug
 else
 	RESULTSDIR=results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
 	mkdir /tmp/${RESULTSDIR}
