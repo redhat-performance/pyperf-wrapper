@@ -62,7 +62,7 @@ generate_csv_file()
 	unit=""
 	while IFS= read -r line
 	do
-		if [[ $line == *"----"* ]]; then
+		if [[ $line == *"--"* ]]; then
 			if [ $instance -ne 0 ]; then
 				if [ $float -eq 1 ]; then
 					value=`echo "scaling=2;${fvalue}/${instance}" | bc -l`
@@ -100,6 +100,11 @@ generate_csv_file()
 			ivalue=`echo "${ivalue}+${value}"| bc`
 		fi
 	done < "${1}.results"
+	#
+	# Do not forget the last one.
+	#
+	value=`echo "${ivalue}/${instance}" | bc`
+	echo ${test_name}:${value}:${unit} >> ${1}.csv
 }
 
 #
@@ -192,7 +197,6 @@ else
 	source ~/.bashrc
 	arguments="${arguments} --test_iterations ${to_times_to_run}"
 	echo $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
-	exit
 	$TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
 fi
 
