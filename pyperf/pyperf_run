@@ -51,6 +51,49 @@ install_tools()
 	fi
 }
 
+
+generate_csv_file()
+{
+	re='^[0-9]+$'
+	instance=0
+	float=0
+	ivalue=0
+	fvalue=0.0
+	test_name=""
+	unit=""
+	reduce=0
+	res_count=0
+	value_sum=0
+	while IFS= read -r line
+	do
+		if [[ $test_name == "" ]]; then
+			test_name=$line
+			continue
+		fi
+		if [ -z "$line" ]; then
+			let "reduce=$reduce+1"
+			if [[ $reduce -eq 2 ]]; then
+				results=`echo "${value_sum}/${res_count}" | bc -l`
+				printf "%s %.2f\n" $test_name $results >> ${1}.csv
+				reduce=0
+				res_count=0
+				value_sum=0
+				test_name=""
+			fi
+			continue
+		fi
+		if [[ $line == *"--"* ]] || [[ $line == *"calibrate"* ]] || [[ $line == *"warmup"* ]]; then
+			continue
+		fi
+		value=`echo $line | cut -d' ' -f 4`
+		let "res_count=${res_count}+1"
+		value_sum=`echo "${value}+${value_sum}" | bc -l`
+	done < "${1}.results"
+	results=`echo "${value_sum}/${res_count}" | bc -l`
+	printf "%s %12.2f\n" $test_name $results >> ${1}.csv
+}
+
+generate_csv_file pyperf_out_2022.05.12-10.06.09
 generate_csv_file()
 {
 	re='^[0-9]+$'
