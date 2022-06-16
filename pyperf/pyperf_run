@@ -250,8 +250,8 @@ if [ $to_pbench -eq 0 ]; then
 else
 	source ~/.bashrc
 	arguments="${arguments} --test_iterations ${to_times_to_run}"
-	echo $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
-	$TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
+	echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
+	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
 fi
 
 
