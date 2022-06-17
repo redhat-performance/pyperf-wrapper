@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# To make sure.
+#
+alternatives --set python /usr/bin/python3
 usage()
 {
 	echo "$1 Usage:"
