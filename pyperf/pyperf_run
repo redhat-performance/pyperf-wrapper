@@ -190,6 +190,17 @@ else
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
 fi
 
+if [ -d "workloads" ]; then
+	#
+	# If running from zathras, workloads will be symlinked to
+	# to /mnt.  Which is done due to azure having a very small
+	# user space.
+	#
+	start_dir=`pwd`
+	cd workloads
+	ln -s $start_dir/* .
+fi
+
 source test_tools/general_setup "$@"
 
 NO_ARGUMENTS=(
