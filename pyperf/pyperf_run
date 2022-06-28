@@ -176,13 +176,13 @@ install_tools $0
 test_name_run="pyperf"
 arguments="$@"
 
+curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
 		run_dir=`pwd`
 	else
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
-		curdir=`pwd`
 		run_dir="${curdir}${run_dir}"
 	fi
 else
@@ -265,6 +265,7 @@ if [ $to_pbench -eq 0 ]; then
 else
 	source ~/.bashrc
 	arguments="${arguments} --test_iterations ${to_times_to_run}"
+	cd $curdir
 	echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
 	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
 fi
@@ -286,6 +287,7 @@ else
 	rm results_${test_name_run}_${to_tuned_setting}
 	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
 	mv  ${test_name_run}_*.out ${RESULTSDIR}
+	cp ${curdir}/meta_data.yml ${RESULTSDIR}
 	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
 	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
 fi
