@@ -55,7 +55,6 @@ install_tools()
 	fi
 }
 
-
 generate_csv_file()
 {
 	re='^[0-9]+$'
@@ -97,63 +96,6 @@ generate_csv_file()
 	printf "%s %12.2f\n" $test_name $results >> ${1}.csv
 }
 
-generate_csv_file pyperf_out_2022.05.12-10.06.09
-generate_csv_file()
-{
-	re='^[0-9]+$'
-	instance=0
-	float=0
-	ivalue=0
-	fvalue=0.0
-	test_name=""
-	unit=""
-	while IFS= read -r line
-	do
-		if [[ $line == *"--"* ]]; then
-			if [ $instance -ne 0 ]; then
-				if [ $float -eq 1 ]; then
-					value=`echo "scaling=2;${fvalue}/${instance}" | bc -l`
-					printf "%s:%10.2f:%s\n" $test_name $value $unit | sed "s/ //g" >> ${1}.csv
-				else
-					value=`echo "${ivalue}/${instance}" | bc`
-					echo ${test_name}:${value}:${unit} >> ${1}.csv
-				fi
-			fi
-			ivalue=0
-			fvalue=0
-			test_name=$prior
-			instance=0
-			float=0
-		fi
-		prior=$line
-		if [[ $line == *"calibrate"* ]]; then
-			continue
-		fi
-		if [[ $line == *"warmup"* ]]; then
-			continue
-		fi
-		value=`echo $line | cut -d' ' -f4 | sed "s/\.//g"`
-		if ! [[ $value =~ $re ]] ; then
-			continue
-		fi
-		let "instance=${instance}+1"
-		value=`echo $line | cut -d' ' -f4`
-		unit=`echo $line | cut -d' ' -f5`
-		if [[ $value == *"."* ]]; then
-			float=1
-			fvalue=`echo "${fvalue}+${value}"| bc -l`
-		else
-			float=0
-			ivalue=`echo "${ivalue}+${value}"| bc`
-		fi
-	done < "${1}.results"
-	#
-	# Do not forget the last one.
-	#
-	value=`echo "${ivalue}/${instance}" | bc`
-	echo ${test_name}:${value}:${unit} >> ${1}.csv
-}
-
 #
 # Variables set by general setup.
 #
@@ -189,6 +131,16 @@ else
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
 fi
+
+if [ ! -f "/tmp/pyperf.out" ]; then
+        command="${0} $@"
+        echo $command
+        $command &> /tmp/pyperf.out
+        cat /tmp/pyperf.out
+        rm /tmp/pyperf.out
+        exit
+fi
+
 
 if [ -d "workloads" ]; then
 	#
@@ -287,6 +239,13 @@ else
 	rm results_${test_name_run}_${to_tuned_setting}
 	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
 	mv  ${test_name_run}_*.out ${RESULTSDIR}
+	lines=`wc -l ${RESULTSDIR}/*.csv | cut -d' ' -f1`
+	if [ $? -ne 0 ]; then
+		echo Failed >> test_results_report
+	else
+		echo Ran >> test_results_report
+	fi
+	cp /tmp/hammerdb.out ${RESULTSDIR}
 	cp ${curdir}/meta_data.yml ${RESULTSDIR}
 	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
 	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
