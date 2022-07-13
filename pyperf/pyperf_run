@@ -245,7 +245,7 @@ else
 	else
 		echo Ran >> ${RESULTSDIR}/test_results_report
 	fi
-	cp /tmp/hammerdb.out ${RESULTSDIR}
+	cp /tmp/pyperf.out ${RESULTSDIR}
 	cp ${curdir}/meta_data.yml ${RESULTSDIR}
 	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
 	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
