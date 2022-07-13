@@ -241,9 +241,9 @@ else
 	mv  ${test_name_run}_*.out ${RESULTSDIR}
 	lines=`wc -l ${RESULTSDIR}/*.csv | cut -d' ' -f1`
 	if [ $? -ne 0 ]; then
-		echo Failed >> test_results_report
+		echo Failed >> ${RESULTSDIR}/test_results_report
 	else
-		echo Ran >> test_results_report
+		echo Ran >> ${RESULTSDIR}/test_results_report
 	fi
 	cp /tmp/hammerdb.out ${RESULTSDIR}
 	cp ${curdir}/meta_data.yml ${RESULTSDIR}
