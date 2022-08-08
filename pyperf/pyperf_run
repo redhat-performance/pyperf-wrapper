@@ -77,7 +77,7 @@ generate_csv_file()
 			let "reduce=$reduce+1"
 			if [[ $reduce -eq 2 ]]; then
 				results=`echo "${value_sum}/${res_count}" | bc -l`
-				printf "%s %.2f\n" $test_name $results >> ${1}.csv
+				printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
 				reduce=0
 				res_count=0
 				value_sum=0
@@ -89,11 +89,12 @@ generate_csv_file()
 			continue
 		fi
 		value=`echo $line | cut -d' ' -f 4`
+		unit=`echo $line | cut -d' ' -f 5`
 		let "res_count=${res_count}+1"
 		value_sum=`echo "${value}+${value_sum}" | bc -l`
 	done < "${1}.results"
 	results=`echo "${value_sum}/${res_count}" | bc -l`
-	printf "%s %12.2f\n" $test_name $results >> ${1}.csv
+	printf "%s:%12.2f:%s\n" $test_name $results $unit >> ${1}.csv
 }
 
 #
