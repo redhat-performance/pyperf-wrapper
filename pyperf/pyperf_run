@@ -248,7 +248,7 @@ else
 	fi
 	cp /tmp/pyperf.out ${RESULTSDIR}
 	cp ${curdir}/meta_data.yml ${RESULTSDIR}
+	find results_${test_name}_${to_tuned_setting}  -type f | tar --transform 's/.*\///g' -cf results_${test_name}_${to_tuned_setting}_pbench.tar --files-from=/dev/stdin
 	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
-	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
 fi
 exit 0
