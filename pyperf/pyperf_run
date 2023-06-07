@@ -1,14 +1,20 @@
 #!/bin/bash
 
+python_pkg="python36"
 #
 # To make sure.
 #
-alternatives --set python /usr/bin/python3
+exit_out()
+{
+	echo $1
+	exit $2
+}
+
 usage()
 {
 	echo "$1 Usage:"
 	source test_tools/general_setup --usage
-        exit 0
+        exit 1
 }
 
 install_tools()
@@ -45,8 +51,7 @@ install_tools()
 	if [ ! -d "test_tools" ]; then
 		git clone $tools_git test_tools
 		if [ $? -ne 0 ]; then
-			echo pulling git $tools_git failed.
-			exit
+			exit_out "pulling git $tools_git failed." 1
 		fi
 	fi
 
@@ -97,6 +102,22 @@ generate_csv_file()
 	printf "%s:%12.2f:%s\n" $test_name $results $unit >> ${1}.csv
 }
 
+dnf_install()
+{
+	dnf install -y $1
+	if [ $? -ne 0 ]; then
+		exit_out "dnf install of $1 failed" 1
+	fi
+}
+
+pip3_install()
+{
+	pip3 install $1
+	if [ $? -ne 0 ]; then
+		exit_out "pip3 install of $1 failed." 1
+	fi
+}
+
 #
 # Variables set by general setup.
 #
@@ -137,9 +158,15 @@ if [ ! -f "/tmp/pyperf.out" ]; then
         command="${0} $@"
         echo $command
         $command &> /tmp/pyperf.out
-        cat /tmp/pyperf.out
-        rm /tmp/pyperf.out
-        exit
+	rtc=$?
+	if [ -f /tmp/pyperf.out ]; then
+		echo =================================
+		echo Output from the test.
+		echo =================================
+        	cat /tmp/pyperf.out
+        	rm /tmp/pyperf.out
+	fi
+        exit $rtc
 fi
 
 
@@ -151,18 +178,26 @@ if [ -d "workloads" ]; then
 	#
 	start_dir=`pwd`
 	cd workloads
-	ln -s $start_dir/* .
+	for file in `ls ${start_dir}`; do
+		if [[ ! -f $file ]] && [[ ! -d $file ]]; then
+			ln -s $start_dir/* .
+		fi
+	done
 fi
 
 source test_tools/general_setup "$@"
 
+ARGUMENT_LIST=(
+        "python_pkg"
+)
+
 NO_ARGUMENTS=(
-        "powers_2"
         "usage"
 )
 
 # read arguments
 opts=$(getopt \
+	--longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
         --longoptions "$(printf "%s," "${NO_ARGUMENTS[@]}")" \
         --name "$(basename "$0")" \
         --options "h" \
@@ -173,6 +208,10 @@ eval set --$opts
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--python_pkg)
+			python_pkg=$2
+			shift 2
+		;;
 		--usage)
 			usage $0
 		;;
@@ -189,19 +228,29 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-
 if [ $to_pbench -eq 0 ]; then
 	rm -rf pyperformance
 	git clone https://github.com/python/pyperformance
+	if [ $? -ne 0 ]; then
+		exit_out "Cloning of https://github.com/python/pyperformance failed." 1
+	fi
 	cd pyperformance
 	git checkout tags/1.0.4
-	dnf install -y python36 python36-devel
-	dnf install -y python38 python38-devel
-	pip3 install psutil
-	pip3 install packaging
-	pip3 install pyparsing
-	pip3 install pyperf
-	pip3 install toml
+	if [ $? -ne 0 ]; then
+		exit_out "Checkout of 1.0.4 failed." 1
+	fi
+	dnf_install "${python_pkg}"
+	dnf_install "${python_pkg}-devel"
+	#
+	# Install pip/pip3
+	#
+	wget https://bootstrap.pypa.io/get-pip.py
+	python3 ./get-pip.py
+	pip3_install psutil
+	pip3_install packaging
+	pip3_install pyparsing
+	pip3_install pyperf
+	pip3_install toml
 
 	cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 	cous=1
@@ -211,9 +260,14 @@ if [ $to_pbench -eq 0 ]; then
 	pwd > /tmp/dave_debug
 	echo python3 -m pyperformance run --output  ${pyresults}.json >> /tmp/dave_debug
 	python3 -m pyperformance run --output  ${pyresults}.json
+	if [ $? -ne 0 ]; then
+		exit_out "Failed: python3 -m pyperformance run --output  ${pyresults}.json" 1
+	fi
 	echo python3 -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
 	python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results
-
+	if [ $? -ne 0 ]; then
+		echo "Failed: python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
+	fi
 	generate_csv_file ${pyresults}
 else
 	source ~/.bashrc
@@ -221,6 +275,9 @@ else
 	cd $curdir
 	echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
 	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
+	if [ $? -ne 0  ]; then
+		exit_out "Failed: $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats"
+	fi
 fi
 
 
