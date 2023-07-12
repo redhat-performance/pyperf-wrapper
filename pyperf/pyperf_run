@@ -1,6 +1,8 @@
 #!/bin/bash
 
-python_pkg="python36"
+PATH="${PATH}:/usr/local/bin"
+export PATH
+python_pkg="python3.11"
 #
 # To make sure.
 #
@@ -141,6 +143,7 @@ test_name_run="pyperf"
 arguments="$@"
 
 curdir=`pwd`
+
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
@@ -149,9 +152,15 @@ if [[ $0 == "./"* ]]; then
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
 		run_dir="${curdir}${run_dir}"
 	fi
+elif [[ $0 != "/"* ]]; then
+	dir=`echo $0 | rev | cut -d'/' -f2- | rev`
+	run_dir="${curdir}/${dir}"
 else
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+	if [[ $run_dir != "/"* ]]; then
+		run_dir=${curdir}/${run_dir}
+	fi
 fi
 
 if [ ! -f "/tmp/pyperf.out" ]; then
