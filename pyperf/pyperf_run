@@ -2,7 +2,7 @@
 
 PATH="${PATH}:/usr/local/bin"
 export PATH
-python_pkg="python3.11"
+python_pkgs=""
 #
 # To make sure.
 #
@@ -15,6 +15,7 @@ exit_out()
 usage()
 {
 	echo "$1 Usage:"
+	echo "--python_pkgs python packages to install"
 	source test_tools/general_setup --usage
         exit 1
 }
@@ -104,11 +105,19 @@ generate_csv_file()
 	printf "%s:%12.2f:%s\n" $test_name $results $unit >> ${1}.csv
 }
 
-dnf_install()
+pkg_install()
 {
-	dnf install -y $1
-	if [ $? -ne 0 ]; then
-		exit_out "dnf install of $1 failed" 1
+	uname -a | grep Ubuntu > /dev/null
+	if [ $? -eq 0 ]; then
+		apt install -y $1
+		if [ $? -ne 0 ]; then
+			exit_out "apt install of $1 failed" 1
+		fi
+	else
+		dnf install -y $1
+		if [ $? -ne 0 ]; then
+			exit_out "dnf install of $1 failed" 1
+		fi
 	fi
 }
 
@@ -197,7 +206,7 @@ fi
 source test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
-        "python_pkg"
+        "python_pkgs"
 )
 
 NO_ARGUMENTS=(
@@ -217,8 +226,8 @@ eval set --$opts
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
-		--python_pkg)
-			python_pkg=$2
+		--python_pkgs)
+			python_pkgs=$2
 			shift 2
 		;;
 		--usage)
@@ -248,8 +257,12 @@ if [ $to_pbench -eq 0 ]; then
 	if [ $? -ne 0 ]; then
 		exit_out "Checkout of 1.0.4 failed." 1
 	fi
-	dnf_install "${python_pkg}"
-	dnf_install "${python_pkg}-devel"
+	if [[ ${python_pkgs} != "" ]]; then
+		pkg_list=`echo $pkg_install | sed "s/,/ /g"`
+		for  i in $pkg_list; do
+			pkg_install $i 
+		done
+	fi
 	#
 	# Install pip/pip3
 	#
