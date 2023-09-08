@@ -268,7 +268,7 @@ if [ $to_pbench -eq 0 ]; then
 	if [[ ${python_pkgs} != "" ]]; then
 		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
 		echo pkg_list $pkg_list >>/tmp/dave
-		for  i in $pkg_list; do
+		for i in $pkg_list; do
 			pkg_install $i 
 		done
 	fi
