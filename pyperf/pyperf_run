@@ -111,27 +111,30 @@ generate_csv_file()
 
 pkg_install()
 {
-	if [ $ubuntu -eq 0 ]; then
-		apt install -y $1
-		if [ $? -ne 0 ]; then
-			exit_out "apt install of $1 failed" 1
-		fi
-	else
-		dnf install -y $1
-		if [ $? -ne 0 ]; then
-			exit_out "dnf install of $1 failed" 1
+	if [ to_no_pkg_install -eq 0 ]; then
+		if [ $ubuntu -eq 0 ]; then
+			apt install -y $1
+			if [ $? -ne 0 ]; then
+				exit_out "apt install of $1 failed" 1
+			fi
+		else
+			dnf install -y $1
+			if [ $? -ne 0 ]; then
+				exit_out "dnf install of $1 failed" 1
+			fi
 		fi
 	fi
 }
 
 pip3_install()
 {
-	pip3 install $1
-	if [ $? -ne 0 ]; then
-		exit_out "pip3 install of $1 failed." 1
+	if [ to_no_pkg_install -eq 0 ]; then
+		pip3 install $1
+		if [ $? -ne 0 ]; then
+			exit_out "pip3 install of $1 failed." 1
+		fi
 	fi
 }
-
 #
 # Variables set by general setup.
 #
