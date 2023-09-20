@@ -251,7 +251,7 @@ if [ $to_pbench -eq 0 ]; then
 	fi
 	if [[ ${python_pkgs} != "" ]]; then
 		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
-		test_tools/package_install --packages "python_pkgs" --no_packages $to_no_pkg_install
+		test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
 	fi
 	if [[ $python_exec != "" ]]; then
 		if [[ ! -f $python_exec ]]; then
