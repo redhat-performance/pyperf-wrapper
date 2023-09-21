@@ -3,8 +3,6 @@
 PATH="${PATH}:/usr/local/bin"
 export PATH
 python_pkgs=""
-test_tools/detect_os | grep Ubuntu > /dev/null
-ubuntu=$?
 python_exec=""
 #
 # To make sure.
@@ -109,26 +107,9 @@ generate_csv_file()
 	printf "%s:%12.2f:%s\n" $test_name $results $unit >> ${1}.csv
 }
 
-pkg_install()
-{
-	if [ to_no_pkg_install -eq 0 ]; then
-		if [ $ubuntu -eq 0 ]; then
-			apt install -y $1
-			if [ $? -ne 0 ]; then
-				exit_out "apt install of $1 failed" 1
-			fi
-		else
-			dnf install -y $1
-			if [ $? -ne 0 ]; then
-				exit_out "dnf install of $1 failed" 1
-			fi
-		fi
-	fi
-}
-
 pip3_install()
 {
-	if [ to_no_pkg_install -eq 0 ]; then
+	if [ $to_no_pkg_install -eq 0 ]; then
 		pip3 install $1
 		if [ $? -ne 0 ]; then
 			exit_out "pip3 install of $1 failed." 1
@@ -270,10 +251,7 @@ if [ $to_pbench -eq 0 ]; then
 	fi
 	if [[ ${python_pkgs} != "" ]]; then
 		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
-		echo pkg_list $pkg_list >>/tmp/dave
-		for i in $pkg_list; do
-			pkg_install $i 
-		done
+		test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
 	fi
 	if [[ $python_exec != "" ]]; then
 		if [[ ! -f $python_exec ]]; then
