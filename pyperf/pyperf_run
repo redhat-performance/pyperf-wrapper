@@ -326,7 +326,7 @@ else
 		echo Ran >> ${RESULTSDIR}/test_results_report
 	fi
 	cp /tmp/pyperf.out ${RESULTSDIR}
-	cp ${curdir}/meta_data.yml ${RESULTSDIR}
+	cp ${curdir}/meta_data*.yml ${RESULTSDIR}
 	rm -f results_pbench.tar
 	working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
 	find $working_dir  -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
