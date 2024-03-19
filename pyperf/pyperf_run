@@ -293,6 +293,9 @@ if [ $to_pbench -eq 0 ]; then
 	python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results
 	if [ $? -ne 0 ]; then
 		echo "Failed: python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
+		echo Failed > test_results_report
+	else
+		echo Ran > test_results_report
 	fi
 	generate_csv_file ${pyresults}
 else
@@ -316,25 +319,6 @@ if [ $to_pbench -eq 1 ]; then
 	cd $dir
 	echo $dir > /tmp/pbench_debug
 else
-	RESULTSDIR=results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
-	mkdir /tmp/${RESULTSDIR}
-	cp python_results/* /tmp/${RESULTSDIR}
-	cd /tmp
-	rm results_${test_name_run}_${to_tuned_setting}
-	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
-	mv  ${test_name_run}_*.out ${RESULTSDIR}
-	lines=`wc -l ${RESULTSDIR}/*.csv | cut -d' ' -f1`
-	if [ $? -ne 0 ]; then
-		echo Failed >> ${RESULTSDIR}/test_results_report
-	else
-		echo Ran >> ${RESULTSDIR}/test_results_report
-	fi
-	cp /tmp/pyperf.out ${RESULTSDIR}
-	cp ${curdir}/meta_data*.yml ${RESULTSDIR}
-	${curdir}/test_tools/move_data $curdir ${RESULTSDIR}
-	rm -f results_pbench.tar
-	working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
-	find $working_dir  -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
-	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report"
 fi
 exit 0
