@@ -317,7 +317,6 @@ if [ $to_pbench -eq 1 ]; then
 	results_prefix=$to_puser"_instance_"$to_configuration
 	dir=`ls -rtd /var/lib/pbench-agent/pyperf* | tail -1`
 	cd $dir
-	echo $dir > /tmp/pbench_debug
 else
 	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report"
 fi
