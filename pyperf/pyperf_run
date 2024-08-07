@@ -311,6 +311,7 @@ else
 	if [ $? -ne 0  ]; then
 		exit_out "Failed: $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats"
 	fi
+	exit 0
 fi
 
 
