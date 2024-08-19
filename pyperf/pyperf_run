@@ -4,6 +4,7 @@ PATH="${PATH}:/usr/local/bin"
 export PATH
 python_pkgs=""
 python_exec=""
+PYPERF_VERSION=1.0.4
 #
 # To make sure.
 #
@@ -16,6 +17,7 @@ exit_out()
 usage()
 {
 	echo "$1 Usage:"
+	echo "--pyperf_version <vers number>: Versionof pyperf to run, default is $PYPERF_VERSION."
 	echo "--python_exec_path: Python to set via alternatives"
 	echo "--python_pkgs: comma seprated list of python packages to install"
 	source test_tools/general_setup --usage
@@ -198,6 +200,7 @@ fi
 source test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
+	"pyperf_version"
 	"python_exec"
         "python_pkgs"
 )
@@ -219,6 +222,10 @@ eval set --$opts
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--pyperf_version)
+			PYPERF_VERSION=$2
+			shift 2
+		;;
 		--python_exec)
 			python_exec=$2
 			shift 2
@@ -245,15 +252,11 @@ done
 
 if [ $to_pbench -eq 0 ]; then
 	rm -rf pyperformance
-	git clone https://github.com/python/pyperformance
+	python3 -m pip install pyperformance==$PYPERF_VERSION
 	if [ $? -ne 0 ]; then
-		exit_out "Cloning of https://github.com/python/pyperformance failed." 1
+		exit_out "python3 -m pip install pyperformance==$PYPERF_VERSION: failed" 1
 	fi
 	cd pyperformance
-	git checkout tags/1.0.4
-	if [ $? -ne 0 ]; then
-		exit_out "Checkout of 1.0.4 failed." 1
-	fi
 	if [[ ${python_pkgs} != "" ]]; then
 		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
 		test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
