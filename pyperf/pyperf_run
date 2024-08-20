@@ -4,7 +4,7 @@ PATH="${PATH}:/usr/local/bin"
 export PATH
 python_pkgs=""
 python_exec=""
-PYPERF_VERSION=1.0.4
+PYPERF_VERSION="1.0.4"
 #
 # To make sure.
 #
@@ -17,7 +17,7 @@ exit_out()
 usage()
 {
 	echo "$1 Usage:"
-	echo "--pyperf_version <vers number>: Versionof pyperf to run, default is $PYPERF_VERSION."
+	echo "--pyperf_version <vers number>: Version of pyperf to run, default is $PYPERF_VERSION."
 	echo "--python_exec_path: Python to set via alternatives"
 	echo "--python_pkgs: comma seprated list of python packages to install"
 	source test_tools/general_setup --usage
@@ -252,6 +252,13 @@ done
 
 if [ $to_pbench -eq 0 ]; then
 	rm -rf pyperformance
+	#
+	# Install pip/pip3
+	#
+	python3 -m ensurepip --upgrade
+	if [[ $? -ne 0 ]]; then
+		exit_out "Failed: python3 -m ensurepip --upgrade" 1
+	fi
 	python3 -m pip install pyperformance==$PYPERF_VERSION
 	if [ $? -ne 0 ]; then
 		exit_out "python3 -m pip install pyperformance==$PYPERF_VERSION: failed" 1
@@ -271,14 +278,6 @@ if [ $to_pbench -eq 0 ]; then
 		alternatives --remove-all python
  		alternatives --install /usr/bin/python python $python_exec 1
 	fi
-	#
-	# Install pip/pip3
-	#
-	wget https://bootstrap.pypa.io/get-pip.py
-	if [[ $? -ne 0 ]]; then
-		exit_out "Failed: wget https://bootstrap.pypa.io/get-pip.py" 1
-	fi
-	python3 ./get-pip.py
 	pip3_install psutil
 	pip3_install packaging
 	pip3_install pyparsing
