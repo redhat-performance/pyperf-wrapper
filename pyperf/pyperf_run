@@ -78,6 +78,10 @@ generate_csv_file()
 	reduce=0
 	res_count=0
 	value_sum=0
+
+  $TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $PYPERF_VERSION --test_name $test_name_run
+
+	echo "Test:Avg:Unit" >> "${1}.csv"
 	while IFS= read -r line
 	do
 		if [[ $test_name == "" ]]; then
@@ -297,6 +301,7 @@ if [ $to_pbench -eq 0 ]; then
 	else
 		echo Ran > test_results_report
 	fi
+
 	generate_csv_file ${pyresults}
 else
 	source ~/.bashrc
