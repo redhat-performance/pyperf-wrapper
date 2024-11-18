@@ -1,0 +1,31 @@
+#!/bin/bash
+
+pip3_install()
+{
+	pip3 -q install $1
+}
+
+PYPERF_VERSION="1.0.4"
+export VIRTUAL_ENV_DISABLE_PROMPT=1
+python3 -m venv ${1}-env
+source ${1}-env/bin/activate
+python3 -m ensurepip --upgrade
+if [[ $? -ne 0 ]]; then
+	echo "Failed: python3 -m ensurepip --upgrade" 1
+	exit
+fi
+python3 -m pip install pyperformance==$PYPERF_VERSION
+if [ $? -ne 0 ]; then
+	echo "python3 -m pip install pyperformance==$PYPERF_VERSION: failed" 1
+	exit
+fi
+pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
+test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
+
+pip3_install psutil
+pip3_install packaging
+pip3_install pyparsing
+pip3_install pyperf
+pip3_install toml
+python3 -m pip install pyperformance==$PYPERF_VERSION
+python3 -m pyperformance run --output  ${1}.json > ${1}.results

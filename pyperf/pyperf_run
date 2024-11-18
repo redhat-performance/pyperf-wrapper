@@ -20,6 +20,12 @@ export PATH
 python_pkgs=""
 python_exec=""
 PYPERF_VERSION="1.11.0"
+number_pyperfs=1
+pindex=0
+pid_index=0
+declare -a pids
+pyresults=""
+
 #
 # To make sure.
 #
@@ -32,11 +38,94 @@ exit_out()
 usage()
 {
 	echo "$1 Usage:"
+	echo "--procs <x>: Number of pyperfs to execute at the same time, default is 1"
 	echo "--pyperf_version <version number>: Version of pyperf to run, default is $PYPERF_VERSION."
 	echo "--python_exec_path: Python to set via alternatives"
 	echo "--python_pkgs: comma seprated list of python packages to install"
 	source test_tools/general_setup --usage
-        exit 1
+	exit 1
+}
+
+convert_unit_to_ns()
+{
+	unit=$1
+	base=1
+
+	if [[ $unit == "ms" ]]; then
+		base=`echo 1000*1000 | bc`
+	elif [[ $unit == "us" ]]; then
+		base=1000
+	elif [[ $unit == "ns" ]]; then
+		base=1
+	else
+		echo unknown unit $unit
+		exit 1
+	fi
+	echo $base
+}
+
+record_value()
+{
+	file=$1
+	sum=$2
+	test=$3
+	unit=ns
+	#
+	# Convert time period to something managable.
+	#
+	full=`echo $sum | cut -d. -f 1`
+	if [ $full -gt 1000000 ]; then
+		unit=ms
+		full=`echo $full/1000000 | bc`
+	elif [ $full -gt 1000 ]; then
+		unit=us
+		full=`echo $full/1000 | bc`
+	fi
+	echo $test:$full:$unit >> $file
+}
+
+combine_csv_files()
+{
+	data=0
+	prefix=$1
+	first_file=${1}_1.csv
+	file_list=`ls ${prefix}*csv`
+	if [[ $first_file == $file_list ]]; then
+		#
+		# Nothing to combine, just the one file.
+		#
+		cp $first_file ${prefix}.csv
+		cp $first_file ${prefix}_avg.csv
+	else
+		#
+		# Need to merge the files.
+		#
+		while IFS= read -r line
+		do
+			if [ $data -eq 0 ]; then
+				echo $line >> $1.csv
+				if [[ $line == "Test:"* ]]; then
+					data=1
+				fi
+				continue
+			fi
+			test=`echo $line | cut -d':' -f 1`
+			test_res=`grep "${test}:" ${prefix}*csv | cut -d':' -f2-`
+			numb_vals=0
+			sum=0
+			for i in $test_res; do
+				value=`echo $i | cut -d':' -f2`
+				unit=`echo $i | cut -d':' -f 3`
+				cnvt=$(convert_unit_to_ns $unit)
+				value=`echo $value*$cnvt | bc`
+				sum=`echo "$sum+$value" | bc`
+				let "numb_vals=$numb_vals+1"
+			done
+			record_value $1.csv $sum $test
+			avg=`echo $sum/$numb_vals | bc | cut -d'.' -f 1`
+			record_value $1_avg.csv $avg $test
+		done < "${first_file}"
+	fi
 }
 
 install_tools()
@@ -93,40 +182,36 @@ generate_csv_file()
 	reduce=0
 	res_count=0
 	value_sum=0
+	start=0
 
-  $TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $PYPERF_VERSION --test_name $test_name_run
-
+	$TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $PYPERF_VERSION --test_name $test_name_run
 	echo "Test:Avg:Unit" >> "${1}.csv"
+
 	while IFS= read -r line
 	do
 		if [[ $test_name == "" ]]; then
 			test_name=$line
 			continue
 		fi
-		if [ -z "$line" ]; then
-			let "reduce=$reduce+1"
-			if [[ $reduce -eq 2 ]]; then
-				if [[ $test_name != *"WARNING:"* ]]; then
-					results=`echo "${value_sum}/${res_count}" | bc -l`
-					printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
-				fi
-				reduce=0
-				res_count=0
-				value_sum=0
-				test_name=""
+		if [ $start -eq 0 ]; then
+			if [[ $line == "###"* ]]; then
+				start=1;
 			fi
+		fi
+		if [ $start -eq 0 ]; then
 			continue
 		fi
-		if [[ $line == *"--"* ]] || [[ $line == *"calibrate"* ]] || [[ $line == *"warmup"* ]] || [[ $line != *"value"* ]]; then
+		if [[ $line == "" ]]; then
 			continue
 		fi
-		value=`echo $line | cut -d' ' -f 4`
-		unit=`echo $line | cut -d' ' -f 5`
-		let "res_count=${res_count}+1"
-		value_sum=`echo "${value}+${value_sum}" | bc -l`
+		if [[ $line == "###"* ]]; then
+			test_name=`echo $line | cut -d' ' -f2`
+		else
+			value=`echo $line | cut -d' ' -f 5`
+			unit=`echo $line | cut -d' ' -f 6`
+			echo $test_name:$value:$unit >> "${1}.csv"
+		fi
 	done < "${1}.results"
-	results=`echo "${value_sum}/${res_count}" | bc -l`
-	printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
 }
 
 pip3_install()
@@ -180,24 +265,22 @@ else
 		run_dir=${curdir}/${run_dir}
 	fi
 fi
-
 # Gather hardware information
 ${curdir}/test_tools/gather_data ${curdir}
 
 
-if [ ! -f "/tmp/pyperf.out" ]; then
-        command="${0} $@"
-        echo $command
-        $command &> /tmp/pyperf.out
+if [ ! -f "/tmp/pyperf.out" ]; thencommand="${0} $@"
+	command="${0} $@"
+	$command &> /tmp/pyperf.out
 	rtc=$?
 	if [ -f /tmp/pyperf.out ]; then
 		echo =================================
 		echo Output from the test.
 		echo =================================
-        	cat /tmp/pyperf.out
-        	rm /tmp/pyperf.out
+		cat /tmp/pyperf.out
+		rm /tmp/pyperf.out
 	fi
-        exit $rtc
+	exit $rtc
 fi
 
 
@@ -219,28 +302,33 @@ fi
 source test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
+	"procs"
 	"pyperf_version"
 	"python_exec"
-        "python_pkgs"
+	"python_pkgs"
 )
 
 NO_ARGUMENTS=(
-        "usage"
+	"usage"
 )
 
 # read arguments
 opts=$(getopt \
 	--longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
-        --longoptions "$(printf "%s," "${NO_ARGUMENTS[@]}")" \
-        --name "$(basename "$0")" \
-        --options "h" \
-        -- "$@"
+	--longoptions "$(printf "%s," "${NO_ARGUMENTS[@]}")" \
+	--name "$(basename "$0")" \
+	--options "h" \
+	-- "$@"
 )
 
 eval set --$opts
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--procs)
+			number_pyperfs=$2
+			shift 2
+		;;
 		--pyperf_version)
 			PYPERF_VERSION=$2
 			shift 2
@@ -271,16 +359,9 @@ done
 
 if [ $to_pbench -eq 0 ]; then
 	rm -rf pyperformance
-
-	python3 -m pip install pyperformance==$PYPERF_VERSION
-	if [ $? -ne 0 ]; then
-		exit_out "python3 -m pip install pyperformance==$PYPERF_VERSION: failed" 1
-	fi
-	cd pyperformance
-	if [[ ${python_pkgs} != "" ]]; then
-		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
-		test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
-	fi
+	#
+	# Install pip/pip3
+	#
 	if [[ $python_exec != "" ]]; then
 		if [[ ! -f $python_exec ]]; then
 			exit_out "Error: Designated python executable, $python_exec, not present"
@@ -291,33 +372,35 @@ if [ $to_pbench -eq 0 ]; then
 		alternatives --remove-all python
  		alternatives --install /usr/bin/python python $python_exec 1
 	fi
-	pip3_install psutil
-	pip3_install packaging
-	pip3_install pyparsing
-	pip3_install pyperf
-	pip3_install toml
 
+	pid_index=0;
 	cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 	cous=1
-	mkdir python_results
+	mkdir -p pyperf_results
 	
-	pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
-	pwd > /tmp/dave_debug
-	echo python3 -m pyperformance run --output  ${pyresults}.json >> /tmp/dave_debug
-	python3 -m pyperformance run --output  ${pyresults}.json
-	if [ $? -ne 0 ]; then
-		exit_out "Failed: python3 -m pyperformance run --output  ${pyresults}.json" 1
-	fi
-	echo python3 -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
-	python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results
-	if [ $? -ne 0 ]; then
-		echo "Failed: python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
-		echo Failed > test_results_report
-	else
-		echo Ran > test_results_report
-	fi
-
-	generate_csv_file ${pyresults}
+	pyresults=pyperf_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
+	export VIRTUAL_ENV_DISABLE_PROMPT=1
+	while [[ "$pid_index" != "$number_pyperfs" ]];
+	do
+		pindex=$pid_index
+		let "pid_index=$pid_index+1"
+		$run_dir/run_pyperf ${pyresults}_${pid_index} &
+		pids[${pindex}]=$!
+	done
+	for pid in ${pids[*]}; do
+		wait $pid
+		if [ $? -ne 0 ]; then
+			echo "Failed: python3 -m pyperformance run --output  ${pyresults}"
+		fi
+	done
+	rm -rf ${pyresults}*env
+	pid_index=0
+	while [[ $pid_index < $number_pyperfs ]];
+	do
+		let "pid_index=$pid_index+1"
+		generate_csv_file ${pyresults}_${pid_index}
+	done
+	combine_csv_files ${pyresults}
 else
 	source ~/.bashrc
 	arguments="${arguments} --test_iterations ${to_times_to_run}"
@@ -334,5 +417,5 @@ fi
 #
 # Process the data.
 #
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report"
+${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "$pyresults*,test_results_report"
 exit 0
