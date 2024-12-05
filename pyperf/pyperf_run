@@ -271,7 +271,7 @@ done
 
 if [ $to_pbench -eq 0 ]; then
 	rm -rf pyperformance
-
+	python3 --version
 	python3 -m pip install pyperformance==$PYPERF_VERSION
 	if [ $? -ne 0 ]; then
 		exit_out "python3 -m pip install pyperformance==$PYPERF_VERSION: failed" 1
