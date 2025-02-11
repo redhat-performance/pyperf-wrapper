@@ -13,6 +13,4 @@ permissions:
 
 jobs:
   check_review_label:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: redhat-performance/zathras/.github/workflows/verify_pr_requirements.yml@main
+    uses: redhat-performance/zathras/.github/workflows/verify_pr_requirements.yml@main
