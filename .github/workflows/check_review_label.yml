@@ -1,0 +1,14 @@
+on:
+  pull_request:
+    types:
+      - opened
+      - labeled
+
+env:
+  TARGET_LABEL: "group_review_lgtm"
+
+jobs:
+  check_review_label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: redhat-performance/zathras/.github/workflows/check_review_label.yml@main

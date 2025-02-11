@@ -1,0 +1,21 @@
+on:
+  pull_request_target:
+    types:
+      - review_requested
+  pull_request_review:
+    types:
+      - submitted
+
+permissions:
+  issues: write
+
+env:
+  ISSUE_STATE: pr_inprogress
+  REMOVE_ISSUES: --remove-label pr_approved --remove-label pr_review --remove-label pr_inprogress
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  check_review_label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: redhat-performance/zathras/.github/workflows/issue_tagging.yml@main
