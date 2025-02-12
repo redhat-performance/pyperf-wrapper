@@ -1,3 +1,5 @@
+name: Check for Group Review label
+
 on:
   pull_request:
     types:

@@ -1,3 +1,5 @@
+name: Update Parent issue
+
 on:
   pull_request_target:
     types:
