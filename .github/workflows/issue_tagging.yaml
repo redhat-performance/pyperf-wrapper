@@ -16,4 +16,4 @@ env:
 
 jobs:
   check_review_label:
-    uses: redhat-performance/zathras/.github/workflows/issue_tagging.yml@main
+    uses: redhat-performance/zathras/.github/workflows/issue_tagging.yaml@main

@@ -13,4 +13,4 @@ permissions:
 
 jobs:
   check_review_label:
-    uses: redhat-performance/zathras/.github/workflows/verify_pr_requirements.yml@main
+    uses: redhat-performance/zathras/.github/workflows/verify_pr_requirements.yaml@main

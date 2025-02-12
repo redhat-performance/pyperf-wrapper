@@ -9,4 +9,4 @@ env:
 
 jobs:
   check_review_label:
-    uses: redhat-performance/zathras/.github/workflows/check_review_label.yml@main
+    uses: redhat-performance/zathras/.github/workflows/check_review_label.yaml@main
