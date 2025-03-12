@@ -316,7 +316,7 @@ if [ $to_pbench -eq 0 ]; then
 	echo $python_exec -m pyperformance run --output  ${pyresults}.json >> /tmp/dave_debug
 	$python_exec -m pyperformance run --output  ${pyresults}.json
 	if [ $? -ne 0 ]; then
-		exit_out "Failed: python3 -m pyperformance run --output  ${pyresults}.json" 1
+		exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
 	fi
 	echo $python_exec -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
 	$python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
