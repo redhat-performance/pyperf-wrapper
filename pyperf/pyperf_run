@@ -142,7 +142,7 @@ pip3_install()
 		if [ $install_pip -eq 1 ]; then
 			$python_exec -m ensurepip || exit_out "Failed to install pip." 1
 		else
-			exit_out "Pip not available for install of $1 failed." 1
+			exit_out "Pip is not available, exiting out" 1
 		fi
 	fi
 
@@ -290,6 +290,10 @@ done
 if [ $to_pbench -eq 0 ]; then
 	rm -rf pyperformance
 
+	if ! command -v $python_exec; then
+		exit_out "Error: Designated python executable, $python_exec, not present"
+	fi
+
 	pip3_install "pyperformance==$PYPERF_VERSION"
 
 	cd pyperformance
@@ -297,10 +301,7 @@ if [ $to_pbench -eq 0 ]; then
 		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
 		test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
 	fi
-	if ! command -v $python_exec; then
-			exit_out "Error: Designated python executable, $python_exec, not present"
-		fi
-	fi
+
 	pip3_install psutil
 	pip3_install packaging
 	pip3_install pyparsing
