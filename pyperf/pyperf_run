@@ -137,7 +137,7 @@ pip3_install()
 		return
 	fi
 
-	$python_exec -m pip3 --version
+	$python_exec -m pip --version
 	if [ $? -ne 0 ]; then
 		if [ $install_pip -eq 1 ]; then
 			$python_exec -m ensurepip || exit_out "Failed to install pip." 1
