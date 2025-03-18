@@ -19,6 +19,7 @@ PATH="${PATH}:/usr/local/bin"
 export PATH
 python_pkgs=""
 python_exec=""
+PYTHON_VERSION=""
 PYPERF_VERSION="1.11.0"
 #
 # To make sure.
@@ -94,7 +95,7 @@ generate_csv_file()
 	res_count=0
 	value_sum=0
 
-  $TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $PYPERF_VERSION --test_name $test_name_run
+  $TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version "py${PYTHON_VERSION}_$PYPERF_VERSION" --test_name $test_name_run 
 
 	echo "Test:Avg:Unit" >> "${1}.csv"
 	while IFS= read -r line
@@ -271,7 +272,7 @@ done
 
 if [ $to_pbench -eq 0 ]; then
 	rm -rf pyperformance
-
+	PYTHON_VERSION=$(python3 --version | awk '{ print $2 }')
 	python3 -m pip install pyperformance==$PYPERF_VERSION
 	if [ $? -ne 0 ]; then
 		exit_out "python3 -m pip install pyperformance==$PYPERF_VERSION: failed" 1
