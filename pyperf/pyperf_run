@@ -139,8 +139,8 @@ pip3_install()
 	fi
 
 	$python_exec -m pip --version
-	if [ $? -ne 0 ]; then
-		if [ $install_pip -eq 1 ]; then
+	if [[ $? -ne 0 ]]; then
+			if [[ $install_pip -eq 1 ]]; then
 			$python_exec -m ensurepip || exit_out "Failed to install pip." 1
 		else
 			exit_out "Pip is not available, exiting out" 1
@@ -148,7 +148,7 @@ pip3_install()
 	fi
 
 	$python_exec -m pip install -q $1
-	if [ $? -ne 0 ]; then
+	if [[ $? -ne 0 ]]; then
 		exit_out "Pip not available for install of $1 failed." 1
 	fi
 }
@@ -315,13 +315,12 @@ if [ $to_pbench -eq 0 ]; then
 	mkdir python_results
 	
 	pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
-	pwd > /tmp/dave_debug
-	echo $python_exec -m pyperformance run --output  ${pyresults}.json >> /tmp/dave_debug
+
 	$python_exec -m pyperformance run --output  ${pyresults}.json
 	if [ $? -ne 0 ]; then
 		exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
 	fi
-	echo $python_exec -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
+	
 	$python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
 	if [ $? -ne 0 ]; then
 		echo "Failed: $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
