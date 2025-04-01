@@ -288,24 +288,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ $to_pbench -eq 0 ]; then
-	rm -rf pyperformance
 	PYTHON_VERSION=$(python3 --version | awk '{ print $2 }')
-	pip3_install "pyperformance==$PYPERF_VERSION"
-	cd pyperformance
 	if [[ ${python_pkgs} != "" ]]; then
 		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
 		test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
 	fi
-	if [[ $python_exec != "" ]]; then
-		if [[ ! -f $python_exec ]]; then
-			exit_out "Error: Designated python executable, $python_exec, not present"
-		fi
-		#
-		# Remove the existing (if any) default python.
-		#
-		alternatives --remove-all python
- 		alternatives --install /usr/bin/python python $python_exec 1
+	if ! command -v $python_exec; then
+		exit_out "Error: Designated python executable, $python_exec, not present"
 	fi
+	pip3_install "pyperformance==$PYPERF_VERSION"
 	pip3_install psutil
 	pip3_install packaging
 	pip3_install pyparsing
