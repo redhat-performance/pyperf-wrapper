@@ -18,7 +18,8 @@
 PATH="${PATH}:/usr/local/bin"
 export PATH
 python_pkgs=""
-python_exec=""
+python_exec="python3"
+install_pip=0
 PYTHON_VERSION=""
 PYPERF_VERSION="1.11.0"
 #
@@ -132,11 +133,22 @@ generate_csv_file()
 
 pip3_install()
 {
-	if [ $to_no_pkg_install -eq 0 ]; then
-		pip3 -q install $1
-		if [ $? -ne 0 ]; then
-			exit_out "pip3 install of $1 failed." 1
+	if [ $to_no_pkg_install -eq 1 ]; then
+		return
+	fi
+
+	$python_exec -m pip --version
+	if [[ $? -ne 0 ]]; then
+			if [[ $install_pip -eq 1 ]]; then
+			$python_exec -m ensurepip || exit_out "Failed to install pip." 1
+		else
+			exit_out "Pip is not available, exiting out" 1
 		fi
+	fi
+
+	$python_exec -m pip install -q $1
+	if [[ $? -ne 0 ]]; then
+		exit_out "Pip not available for install of $1 failed." 1
 	fi
 }
 #
@@ -222,11 +234,12 @@ source test_tools/general_setup "$@"
 ARGUMENT_LIST=(
 	"pyperf_version"
 	"python_exec"
-        "python_pkgs"
+	"python_pkgs"
 )
 
 NO_ARGUMENTS=(
-        "usage"
+	"usage"
+	"install_pip"
 )
 
 # read arguments
@@ -254,6 +267,10 @@ while [[ $# -gt 0 ]]; do
 			python_pkgs=$2
 			shift 2
 		;;
+		--install_pip)
+			install_pip=1
+			shift 1
+		;;
 		--usage)
 			usage $0
 		;;
@@ -271,27 +288,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ $to_pbench -eq 0 ]; then
-	rm -rf pyperformance
-	PYTHON_VERSION=$(python3 --version | awk '{ print $2 }')
-	python3 -m pip install pyperformance==$PYPERF_VERSION
-	if [ $? -ne 0 ]; then
-		exit_out "python3 -m pip install pyperformance==$PYPERF_VERSION: failed" 1
-	fi
-	cd pyperformance
+	PYTHON_VERSION=$($python_exec --version | awk '{ print $2 }')
 	if [[ ${python_pkgs} != "" ]]; then
 		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
 		test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
 	fi
-	if [[ $python_exec != "" ]]; then
-		if [[ ! -f $python_exec ]]; then
-			exit_out "Error: Designated python executable, $python_exec, not present"
-		fi
-		#
-		# Remove the existing (if any) default python.
-		#
-		alternatives --remove-all python
- 		alternatives --install /usr/bin/python python $python_exec 1
+	if ! command -v $python_exec; then
+		exit_out "Error: Designated python executable, $python_exec, not present"
 	fi
+	pip3_install "pyperformance==$PYPERF_VERSION"
 	pip3_install psutil
 	pip3_install packaging
 	pip3_install pyparsing
@@ -303,16 +308,15 @@ if [ $to_pbench -eq 0 ]; then
 	mkdir python_results
 	
 	pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
-	pwd > /tmp/dave_debug
-	echo python3 -m pyperformance run --output  ${pyresults}.json >> /tmp/dave_debug
-	python3 -m pyperformance run --output  ${pyresults}.json
+
+	$python_exec -m pyperformance run --output  ${pyresults}.json
 	if [ $? -ne 0 ]; then
-		exit_out "Failed: python3 -m pyperformance run --output  ${pyresults}.json" 1
+		exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
 	fi
-	echo python3 -m pyperf dump  ${pyresults}.json >> /tmp/dave_debug
-	python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results
+	
+	$python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
 	if [ $? -ne 0 ]; then
-		echo "Failed: python3 -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
+		echo "Failed: $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
 		echo Failed > test_results_report
 	else
 		echo Ran > test_results_report
