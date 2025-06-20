@@ -90,32 +90,32 @@ generate_csv_file()
 	float=0
 	ivalue=0
 	fvalue=0.0
-	test_name=""
+	tst_name=""
 	unit=""
 	reduce=0
 	res_count=0
 	value_sum=0
 
-  $TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version "py${PYTHON_VERSION}_$PYPERF_VERSION" --test_name $test_name_run 
+  $TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version "py${PYTHON_VERSION}_$PYPERF_VERSION" --test_name $test_name 
 
 	echo "Test:Avg:Unit" >> "${1}.csv"
 	while IFS= read -r line
 	do
-		if [[ $test_name == "" ]]; then
-			test_name=$line
+		if [[ $tst_name == "" ]]; then
+			tst_name=$line
 			continue
 		fi
 		if [ -z "$line" ]; then
 			let "reduce=$reduce+1"
 			if [[ $reduce -eq 2 ]]; then
-				if [[ $test_name != *"WARNING:"* ]]; then
+				if [[ $tst_name != *"WARNING:"* ]]; then
 					results=`echo "${value_sum}/${res_count}" | bc -l`
-					printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+					printf "%s:%.2f:%s\n" $tst_name $results $unit >> ${1}.csv
 				fi
 				reduce=0
 				res_count=0
 				value_sum=0
-				test_name=""
+				tst_name=""
 			fi
 			continue
 		fi
@@ -128,7 +128,7 @@ generate_csv_file()
 		value_sum=`echo "${value}+${value_sum}" | bc -l`
 	done < "${1}.results"
 	results=`echo "${value_sum}/${res_count}" | bc -l`
-	printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+	printf "%s:%.2f:%s\n" $tst_name $results $unit >> ${1}.csv
 }
 
 pip3_install()
@@ -170,7 +170,7 @@ pip3_install()
 
 install_tools $0
 
-test_name_run="pyperf"
+test_name="pyperf"
 arguments="$@"
 
 curdir=`pwd`
@@ -229,7 +229,9 @@ if [ -d "workloads" ]; then
 	done
 fi
 
+pushd $curdir > /dev/null
 source test_tools/general_setup "$@"
+popd > /dev/null
 
 ARGUMENT_LIST=(
 	"pyperf_version"
@@ -305,9 +307,11 @@ if [ $to_pbench -eq 0 ]; then
 
 	cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 	cous=1
+	rm -rf python_results
+
 	mkdir python_results
 	
-	pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
+	pyresults=python_results/results_${test_name}
 
 	$python_exec -m pyperformance run --output  ${pyresults}.json
 	if [ $? -ne 0 ]; then
@@ -327,10 +331,10 @@ else
 	source ~/.bashrc
 	arguments="${arguments} --test_iterations ${to_times_to_run}"
 	cd $curdir
-	echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
-	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
+	echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name} --spacing 11 --pbench_stats $to_pstats
+	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name} --spacing 11 --pbench_stats $to_pstats
 	if [ $? -ne 0  ]; then
-		exit_out "Failed: $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats"
+		exit_out "Failed: $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name} --spacing 11 --pbench_stats $to_pstats"
 	fi
 	exit 0
 fi
@@ -339,5 +343,11 @@ fi
 #
 # Process the data.
 #
+$TOOLS_BIN/validate_line --results_file ${pyresults}.csv --base_results_file $run_dir/base_test_results/test1/verify
+if [ $? -ne 0 ]; then
+	echo Failed >> test_results_report
+else
+	echo Ran >> test_results_report
+fi
 ${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report"
 exit 0
