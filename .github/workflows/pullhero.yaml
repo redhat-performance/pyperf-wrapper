@@ -15,7 +15,7 @@ jobs:
       - name: Push code review
         run: >
           pullhero --vcs-provider github 
-          --vcs-token ${{ GITHUB_TOKEN }}
+          --vcs-token ${{ secrets.GITHUB_TOKEN }}
           --vcs-change-id ${{ github.event.pull_request.number }}
           --vcs-repository ${{ github.repository }}
           --agent review
