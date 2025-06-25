@@ -1,0 +1,27 @@
+on:
+  pull_request:
+    types: [opened, review_requested]
+
+jobs:
+  pullhero:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install pullhero
+        run: pip3 install pullhero
+
+      - name: Push code review
+        run: >
+          pullhero --vcs-provider github 
+          --vcs-token ${{ GITHUB_TOKEN }}
+          --vcs-change-id ${{ github.event.pull_request.number }}
+          --vcs-repository ${{ github.repository }}
+          --agent review
+          --agent-action comment
+          --vcs-base-branch ${{ github.event.pull_request.base.ref }}
+          --vcs-head-branch ${{ github.event.pull_request.head.ref }}
+          --llm-api-key ${{ secrets.PULLHERO_API_KEY }}
+          --llm-api-host ${{ secrets.PULLHERO_API_HOST }}
+          --llm-api-model ${{ secrets.PULLHERO_API_MODEL }}
