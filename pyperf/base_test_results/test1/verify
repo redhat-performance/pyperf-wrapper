@@ -1,4 +1,4 @@
 %_header
 Test:Avg:Unit
 %_multiples
-:[0-9.]{1,}:ms|us|ns|s
+:[1-9]\d*(\.\d+)?|\d*\.[1-9]\d*:ms|us|ns|s$
