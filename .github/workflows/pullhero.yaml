@@ -26,3 +26,4 @@ jobs:
           --llm-api-key ${{ secrets.PULLHERO_API_KEY }}
           --llm-api-host ${{ secrets.PULLHERO_API_HOST }}
           --llm-api-model ${{ secrets.PULLHERO_API_MODEL }}
+          --llm-api-endpoint ${{ secrets.PULLHERO_API_ENDPOINT }}
