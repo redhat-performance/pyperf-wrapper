@@ -22,6 +22,7 @@ python_exec="python3"
 install_pip=0
 PYTHON_VERSION=""
 PYPERF_VERSION="1.11.0"
+rtc=$?
 #
 # To make sure.
 #
@@ -344,10 +345,6 @@ fi
 # Process the data.
 #
 $TOOLS_BIN/validate_line --results_file ${pyresults}.csv --base_results_file $run_dir/base_test_results/test1/verify
-if [ $? -ne 0 ]; then
-	echo Failed >> test_results_report
-else
-	echo Ran >> test_results_report
-fi
+rtc=$?
 ${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report"
-exit 0
+exit $rtc

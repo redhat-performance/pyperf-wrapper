@@ -1,4 +1,29 @@
+#
+# Main reg exp summary
+#  :[1-9]\d*(\.\d+)?|\d*\.[1-9]\d*:ms|us|ns|s$
+#
+#   Field 1: Any match
+#   Field 2: A non zerp decimal value
+#   Field 3: Time unit, expect one of ms, us, ns, s
+#
+# Detailed description
+#  [1-9]\d*(\.\d+)?|\d*\.[1-9]\d*
+#    [1-9]: Matches a value 1-9
+#    \d*: Matches zero or more digits (0-9).
+#    (\.\d+)?: This is an optional non-capturing group.
+#       \.: Matches a literal dot (.).
+#       \d+: Matches one or more digits (0-9).
+#       ?|: Makes the entire group (\.\d+) optional.
+#    \d*: Matches zero or more digits (0-9).
+#    \.: Matches a literal dot (.).
+#    [1-9]: Matches a single digit from 1 to 9 (non-zero).
+#    \d*: Matches zero or more digits. So, \d*\.[1-9]\d* matches numbers like .5, 1.2, 0.1, 10.05.
+#   ms|us|ns|s: Needs to match one of the time units, ms,us,ns or s
+#   $: This is an anchor that matches the end of the line.
+#
 %_header
 Test:Avg:Unit
+#
+# We may nave multiple lises of results.
 %_multiples
 :[1-9]\d*(\.\d+)?|\d*\.[1-9]\d*:ms|us|ns|s$
