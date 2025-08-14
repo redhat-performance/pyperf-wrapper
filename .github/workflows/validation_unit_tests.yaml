@@ -1,0 +1,19 @@
+name: Validation Unit Tests
+
+on:
+  pull_request:
+
+jobs:
+  validation_unit_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          pip install pydantic pytest
+
+      - name: Run validation unit tests
+        run: |
+          pytest
