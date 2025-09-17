@@ -111,6 +111,14 @@ generate_csv_file()
 				if [[ $test_name != *"WARNING:"* ]]; then
 					results=`echo "${value_sum}/${res_count}" | bc -l`
 					printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+					
+					if [[ $to_use_pcp -eq 1 ]]; then
+						metric_name="pyperf_${test_name}"
+						ns_results=$($TOOLS_BIN/convert_val --from_unit $unit --to_unit ns --time_val --value $results | sed -e 's/ns//g')
+						# Cannot use convert_val directly since it does not support floating point output
+						sec_results=$(echo "$ns_results/1000000000" | bc -l)
+						result2pcp "$metric_name" "${sec_results}"
+					fi
 				fi
 				reduce=0
 				res_count=0
@@ -129,6 +137,13 @@ generate_csv_file()
 	done < "${1}.results"
 	results=`echo "${value_sum}/${res_count}" | bc -l`
 	printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+	if [[ $to_use_pcp -eq 1 ]]; then
+		metric_name="pyperf_${test_name}"
+		ns_results=$($TOOLS_BIN/convert_val --from_unit $unit --to_unit ns --time_val --value $results | sed -e 's/ns//g')
+		# Cannot use convert_val directly since it does not support floating point output
+		sec_results=$(echo "$ns_results/1000000000" | bc -l)
+		result2pcp "$metric_name" "${sec_results}"
+	fi
 }
 
 pip3_install()
@@ -304,6 +319,15 @@ mkdir python_results
 
 pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
 
+if [[ $to_use_pcp -eq 1 ]]; then
+	source $TOOLS_BIN/pcp/pcp_commands.inc
+	setup_pcp
+	pcp_cfg=$TOOLS_BIN/pcp/default.cfg
+	pcp_dir=/tmp/pcp_pyperf_$(date "+%Y.%m.%d-%H.%M.%S")
+	start_pcp $pcp_dir/ pyperf $pcp_cfg
+	start_pcp_subset
+fi
+
 $python_exec -m pyperformance run --output  ${pyresults}.json
 if [ $? -ne 0 ]; then
 	exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
@@ -319,8 +343,13 @@ fi
 
 generate_csv_file ${pyresults}
 
+if [[ $to_use_pcp -eq 1 ]]; then
+	stop_pcp_subset
+	shutdown_pcp
+fi
+
 #
 # Process the data.
 #
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report"
+${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report,$pcp_dir"
 exit 0
