@@ -22,6 +22,7 @@ python_exec="python3"
 install_pip=0
 PYTHON_VERSION=""
 PYPERF_VERSION="1.11.0"
+copy_dirs=""
 #
 # To make sure.
 #
@@ -326,6 +327,7 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	pcp_dir=/tmp/pcp_pyperf_$(date "+%Y.%m.%d-%H.%M.%S")
 	start_pcp $pcp_dir/ pyperf $pcp_cfg
 	start_pcp_subset
+	copy_dirs="$pcp_dir"
 fi
 
 $python_exec -m pyperformance run --output  ${pyresults}.json
@@ -348,8 +350,13 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	shutdown_pcp
 fi
 
+
+if [[ ! -z "$copy_dirs" ]]; then
+	copy_dirs="--copy_dir $copy_dirs"
+fi
+
 #
 # Process the data.
 #
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report,$pcp_dir"
+${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
 exit 0
