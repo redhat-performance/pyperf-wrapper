@@ -28,6 +28,12 @@ copy_dirs=""
 #
 exit_out()
 {
+	if [[ $to_use_pcp -eq 1 ]]; then
+		stop_pcp_subset
+		stop_pcp
+		shutdown_pcp
+	fi
+
 	echo $1
 	exit $2
 }
@@ -347,6 +353,7 @@ generate_csv_file ${pyresults}
 
 if [[ $to_use_pcp -eq 1 ]]; then
 	stop_pcp_subset
+	stop_pcp
 	shutdown_pcp
 fi
 
