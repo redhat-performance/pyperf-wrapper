@@ -22,11 +22,18 @@ python_exec="python3"
 install_pip=0
 PYTHON_VERSION=""
 PYPERF_VERSION="1.11.0"
+copy_dirs=""
 #
 # To make sure.
 #
 exit_out()
 {
+	if [[ $to_use_pcp -eq 1 ]]; then
+		stop_pcp_subset
+		stop_pcp
+		shutdown_pcp
+	fi
+
 	echo $1
 	exit $2
 }
@@ -111,6 +118,14 @@ generate_csv_file()
 				if [[ $test_name != *"WARNING:"* ]]; then
 					results=`echo "${value_sum}/${res_count}" | bc -l`
 					printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+					
+					if [[ $to_use_pcp -eq 1 ]]; then
+						metric_name="pyperf_${test_name}"
+						ns_results=$($TOOLS_BIN/convert_val --from_unit $unit --to_unit ns --time_val --value $results | sed -e 's/ns//g')
+						# Cannot use convert_val directly since it does not support floating point output
+						sec_results=$(echo "$ns_results/1000000000" | bc -l)
+						result2pcp "$metric_name" "${sec_results}"
+					fi
 				fi
 				reduce=0
 				res_count=0
@@ -129,6 +144,13 @@ generate_csv_file()
 	done < "${1}.results"
 	results=`echo "${value_sum}/${res_count}" | bc -l`
 	printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+	if [[ $to_use_pcp -eq 1 ]]; then
+		metric_name="pyperf_${test_name}"
+		ns_results=$($TOOLS_BIN/convert_val --from_unit $unit --to_unit ns --time_val --value $results | sed -e 's/ns//g')
+		# Cannot use convert_val directly since it does not support floating point output
+		sec_results=$(echo "$ns_results/1000000000" | bc -l)
+		result2pcp "$metric_name" "${sec_results}"
+	fi
 }
 
 pip3_install()
@@ -158,10 +180,6 @@ pip3_install()
 # to_home_root: home directory
 # to_configuration: configuration information
 # to_times_to_run: number of times to run the test
-# to_pbench: Run the test via pbench
-# to_pbench_copy: Copy the data to the pbench repository, not move_it.
-# to_puser: User running pbench
-# to_run_label: Label for the run
 # to_user: User on the test system running the test
 # to_sys_type: for results info, basically aws, azure or local
 # to_sysname: name of the system
@@ -287,57 +305,65 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-if [ $to_pbench -eq 0 ]; then
-	PYTHON_VERSION=$($python_exec --version | awk '{ print $2 }')
-	if [[ ${python_pkgs} != "" ]]; then
-		pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
-		test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
-	fi
-	if ! command -v $python_exec; then
-		exit_out "Error: Designated python executable, $python_exec, not present"
-	fi
-	pip3_install "pyperformance==$PYPERF_VERSION"
-	pip3_install psutil
-	pip3_install packaging
-	pip3_install pyparsing
-	pip3_install pyperf
-	pip3_install toml
+PYTHON_VERSION=$($python_exec --version | awk '{ print $2 }')
+if [[ ${python_pkgs} != "" ]]; then
+	pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
+	test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
+fi
+if ! command -v $python_exec; then
+	exit_out "Error: Designated python executable, $python_exec, not present"
+fi
+pip3_install "pyperformance==$PYPERF_VERSION"
+pip3_install psutil
+pip3_install packaging
+pip3_install pyparsing
+pip3_install pyperf
+pip3_install toml
 
-	cpus=`cat /proc/cpuinfo | grep processor | wc -l`
-	cous=1
-	mkdir python_results
-	
-	pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
+cpus=`cat /proc/cpuinfo | grep processor | wc -l`
+cous=1
+mkdir python_results
 
-	$python_exec -m pyperformance run --output  ${pyresults}.json
-	if [ $? -ne 0 ]; then
-		exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
-	fi
-	
-	$python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
-	if [ $? -ne 0 ]; then
-		echo "Failed: $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
-		echo Failed > test_results_report
-	else
-		echo Ran > test_results_report
-	fi
+pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
 
-	generate_csv_file ${pyresults}
-else
-	source ~/.bashrc
-	arguments="${arguments} --test_iterations ${to_times_to_run}"
-	cd $curdir
-	echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
-	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
-	if [ $? -ne 0  ]; then
-		exit_out "Failed: $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats"
-	fi
-	exit 0
+if [[ $to_use_pcp -eq 1 ]]; then
+	source $TOOLS_BIN/pcp/pcp_commands.inc
+	setup_pcp
+	pcp_cfg=$TOOLS_BIN/pcp/default.cfg
+	pcp_dir=/tmp/pcp_pyperf_$(date "+%Y.%m.%d-%H.%M.%S")
+	start_pcp $pcp_dir/ pyperf $pcp_cfg
+	start_pcp_subset
+	copy_dirs="$pcp_dir"
 fi
 
+$python_exec -m pyperformance run --output  ${pyresults}.json
+if [ $? -ne 0 ]; then
+	exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
+fi
+
+$python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
+if [ $? -ne 0 ]; then
+	echo "Failed: $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
+	echo Failed > test_results_report
+else
+	echo Ran > test_results_report
+fi
+
+generate_csv_file ${pyresults}
+
+if [[ $to_use_pcp -eq 1 ]]; then
+	stop_pcp_subset
+	stop_pcp
+	shutdown_pcp
+fi
+
+
+if [[ ! -z "$copy_dirs" ]]; then
+	copy_dirs="--copy_dir $copy_dirs"
+fi
 
 #
 # Process the data.
 #
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report"
+${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
 exit 0
