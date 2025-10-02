@@ -1,0 +1,33 @@
+{
+    "dependencies": {
+        "amzn": [
+            "bc",
+            "git",
+            "zip",
+            "unzip",
+            "python3",
+            "python3-devel",
+            "numactl",
+            "perf",
+            "wget"
+        ],
+        "rhel": [
+            "bc",
+            "git",
+            "zip",
+            "unzip",
+            "python3",
+            "python3-devel",
+            "numactl",
+            "perf",
+            "wget"
+        ],
+        "pip": [
+            "psutil",
+            "packaging",
+            "pyparsing",
+            "pyperf",
+            "toml"
+        ]
+    }
+}

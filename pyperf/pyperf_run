@@ -23,6 +23,8 @@ install_pip=0
 PYTHON_VERSION=""
 PYPERF_VERSION="1.11.0"
 copy_dirs=""
+
+base_dir=$(dirname $(realpath $0))
 #
 # To make sure.
 #
@@ -307,18 +309,13 @@ done
 
 PYTHON_VERSION=$($python_exec --version | awk '{ print $2 }')
 if [[ ${python_pkgs} != "" ]]; then
-	pkg_list=`echo $python_pkgs | sed "s/,/ /g"`
-	test_tools/package_install --packages "$python_pkgs" --no_packages $to_no_pkg_install
+	pkg_list="--packages `echo $python_pkgs | sed "s/,/ /g"`"
 fi
 if ! command -v $python_exec; then
 	exit_out "Error: Designated python executable, $python_exec, not present"
 fi
-pip3_install "pyperformance==$PYPERF_VERSION"
-pip3_install psutil
-pip3_install packaging
-pip3_install pyparsing
-pip3_install pyperf
-pip3_install toml
+
+$TOOLS_BIN/package_tool --wrapper_config $base_dir/pyperf.json $pkg_list --pip_packages "pyperformance==$PYPERF_VERSION"
 
 cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 cous=1
