@@ -315,7 +315,7 @@ if ! command -v $python_exec; then
 	exit_out "Error: Designated python executable, $python_exec, not present"
 fi
 
-$TOOLS_BIN/package_tool --wrapper_config $base_dir/pyperf.json $pkg_list --pip_packages "pyperformance==$PYPERF_VERSION"
+$TOOLS_BIN/package_tool --wrapper_config $base_dir/../pyperf.json $pkg_list --pip_packages "pyperformance==$PYPERF_VERSION"
 
 cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 cous=1
