@@ -22,17 +22,6 @@
             "perf",
             "wget"
         ],
-        "suse": [
-            "bc",
-            "git",
-            "zip",
-            "unzip",
-            "python3",
-            "python3-devel",
-            "numactl",
-            "perf",
-            "wget"
-        ],
         "pip": [
             "psutil",
             "packaging",
