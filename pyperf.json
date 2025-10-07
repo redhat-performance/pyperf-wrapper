@@ -5,8 +5,6 @@
             "git",
             "zip",
             "unzip",
-            "python3",
-            "python3-devel",
             "numactl",
             "perf",
             "wget"
@@ -16,10 +14,17 @@
             "git",
             "zip",
             "unzip",
-            "python3",
-            "python3-devel",
             "numactl",
             "perf",
+            "wget"
+        ],
+        "ubuntu": [
+            "bc",
+            "git",
+            "zip",
+            "unzip",
+            "numactl",
+            "python3-pip",
             "wget"
         ],
         "pip": [
