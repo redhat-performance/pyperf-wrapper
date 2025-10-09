@@ -21,6 +21,7 @@
         "ubuntu": [
             "bc",
             "git",
+            "python3-lib2to3",
             "zip",
             "unzip",
             "numactl",
