@@ -315,24 +315,25 @@ if ! command -v $python_exec; then
 	exit_out "Error: Designated python executable, $python_exec, not present"
 fi
 
-python_bin_name=$(basename $python_exec)
-python_dep_file="$base_dir/../python_deps/$python_bin_name.json"
-if [[ ! -f "$python_dep_file" ]]; then
-	exit_out "Unsupported python binary $python_bin_name, exiting" 1
+if [[  $to_no_pkg_install -eq 0 ]]; then
+	python_bin_name=$(basename $python_exec)
+	python_dep_file="$base_dir/../python_deps/$python_bin_name.json"
+	if [[ ! -f "$python_dep_file" ]]; then
+		exit_out "Unsupported python binary $python_bin_name, exiting" 1
+	fi
+
+	$TOOLS_BIN/package_tool --wrapper_config $python_dep_file
+
+	if [[ $? -ne 0 ]]; then
+		exit_out "Error installing needed python dependencies" 1
+	fi
+
+	$TOOLS_BIN/package_tool --wrapper_config $base_dir/../pyperf.json $pkg_list --pip_packages "pyperformance==$PYPERF_VERSION"
+
+	if [[ $? -ne 0 ]]; then
+		exit_out "Error installing system packages" 1
+	fi
 fi
-
-$TOOLS_BIN/package_tool --wrapper_config $python_dep_file
-
-if [[ $? -ne 0 ]]; then
-	exit_out "Error installing needed python dependencies" 1
-fi
-
-$TOOLS_BIN/package_tool --wrapper_config $base_dir/../pyperf.json $pkg_list --pip_packages "pyperformance==$PYPERF_VERSION"
-
-if [[ $? -ne 0 ]]; then
-	exit_out "Error installing system packages" 1
-fi
-
 
 cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 cous=1
