@@ -18,6 +18,15 @@
             "perf",
             "wget"
         ],
+        "fedora": [
+            "bc",
+            "git",
+            "zip",
+            "unzip",
+            "numactl",
+            "perf",
+            "wget"
+        ],
         "ubuntu": [
             "bc",
             "git",
