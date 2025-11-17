@@ -357,9 +357,9 @@ if [ $? -ne 0 ]; then
 	exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
 fi
 
-$python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
+$python_exec -m pyperf dump  --quiet ${pyresults}.json > ${pyresults}.results
 if [ $? -ne 0 ]; then
-	echo "Failed: $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
+	echo "Failed: $python_exec -m pyperf dump --quiet  ${pyresults}.json > ${pyresults}.results" 1
 	echo Failed > test_results_report
 else
 	echo Ran > test_results_report
