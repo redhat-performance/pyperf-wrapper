@@ -367,8 +367,8 @@ fi
 
 generate_csv_file ${pyresults}
 
-$TOOLS_BIN/csv_to_json $to_json_flags --csv_file ${pyresults}.json --output_file ${pyresults}.json
-$TOOLS_BIN/verify_results $to_verify_flags --file ${pyresults}.json --schema_file $to_script_dir/../result_schema.py
+$TOOLS_BIN/csv_to_json $to_json_flags --csv_file ${pyresults}.csv --output_file ${pyresults}_validate.json
+$TOOLS_BIN/verify_results $to_verify_flags --file ${pyresults}_validate.json --schema_file $to_script_dir/../result_schema.py
 
 if [[ $to_use_pcp -eq 1 ]]; then
 	stop_pcp_subset
