@@ -23,6 +23,7 @@ install_pip=0
 PYTHON_VERSION=""
 PYPERF_VERSION="1.11.0"
 copy_dirs=""
+benchmarks="all"
 
 base_dir=$(dirname $(realpath $0))
 #
@@ -46,6 +47,7 @@ usage()
 	echo "--pyperf_version <version number>: Version of pyperf to run, default is $PYPERF_VERSION."
 	echo "--python_exec_path: Python to set via alternatives"
 	echo "--python_pkgs: comma seprated list of python packages to install"
+	echo "--pyperf_benchmarks: Comma separated list of pyperformance benchmarks to run.  Default is to run all tests."
 	source test_tools/general_setup --usage
         exit 1
 }
@@ -255,6 +257,7 @@ ARGUMENT_LIST=(
 	"pyperf_version"
 	"python_exec"
 	"python_pkgs"
+	"pyperf_benchmarks"
 )
 
 NO_ARGUMENTS=(
@@ -290,6 +293,10 @@ while [[ $# -gt 0 ]]; do
 		--install_pip)
 			install_pip=1
 			shift 1
+		;;
+		--pyperf_benchmarks)
+			benchmarks=$2
+			shift 2
 		;;
 		--usage)
 			usage $0
@@ -351,7 +358,12 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	copy_dirs="$pcp_dir"
 fi
 
-$python_exec -m pyperformance run --output  ${pyresults}.json
+pyperf_flags=""
+if [[ "$benchmarks" != "all" ]]; then
+	pyperf_flags="-b $benchmarks"
+fi
+
+$python_exec -m pyperformance run --output  ${pyresults}.json $pyperf_flags
 if [ $? -ne 0 ]; then
 	exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
 fi
