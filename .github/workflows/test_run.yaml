@@ -26,13 +26,13 @@ jobs:
       image: ${{ matrix.image }}
     steps:
       - name: Initialize ${{ matrix.name }}
-        run: sh -c '${{ matrix.initScript }}'
+        run: ${{ matrix.initScript }}
 
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Checkout test_tools
-        run: git clone https://github.com/redhat-performance/test_tools-wrappers.git /root/test_tools/
+        run: git clone https://github.com/redhat-performance/test_tools-wrappers.git /github/root/test_tools/
 
       - name: Run test
         run: ./pyperf/pyperf_run
