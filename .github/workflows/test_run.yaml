@@ -21,6 +21,14 @@ jobs:
             initScript: >
               apt update &&
               apt install -y git jq
+          - name: CentOS 9
+            image: quay.io/centos/centos:stream9
+            initScript: >
+              dnf install -y git jq util-linux diffutils
+          - name: CentOS 10
+            image: quay.io/centos/centos:stream10
+            initScript: >
+              dnf install -y git jq util-linux diffutils
     name: ${{ matrix.name }}
     container:
       image: ${{ matrix.image }}
