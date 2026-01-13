@@ -18,6 +18,15 @@
             "perf",
             "wget"
         ],
+        "centos": [
+            "bc",
+            "git",
+            "zip",
+            "unzip",
+            "numactl",
+            "perf",
+            "wget"
+        ],
         "ubuntu": [
             "bc",
             "git",
