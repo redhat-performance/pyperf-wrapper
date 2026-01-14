@@ -52,6 +52,26 @@ usage()
         exit 1
 }
 
+verify_benchmark_names()
+{
+	benchmark_file=$(mktemp pyperf_benchmarks.XXXXX)
+	$python_exec -m pyperformance list | head -n -2 | tail -n +2 | sed -e 's/- //g' > $benchmark_file
+	invalid_benchmarks=""
+	for benchmark in $(echo $benchmarks | tr ',' ' '); do
+		grep $benchmark $benchmark_file > /dev/null
+
+		if [[ $? -ne 0 ]]; then
+			invalid_benchmarks="$benchmark $invalid_benchmarks"
+		fi
+	done
+
+	rm -f $benchmark_file
+
+	if [[ -n "$invalid_benchmarks" ]]; then
+		exit_out "Error: Could not find the following benchmarks $invalid_benchmarks" 1
+	fi
+}
+
 install_tools()
 {
 	show_usage=0
@@ -223,7 +243,7 @@ ${curdir}/test_tools/gather_data ${curdir}
 if [ ! -f "/tmp/pyperf.out" ]; then
         command="${0} $@"
         echo $command
-        $command &> /tmp/pyperf.out
+        $command 2>&1 | tee /tmp/pyperf.out
 	rtc=$?
 	if [ -f /tmp/pyperf.out ]; then
 		echo =================================
@@ -360,6 +380,7 @@ fi
 
 pyperf_flags=""
 if [[ "$benchmarks" != "all" ]]; then
+	verify_benchmark_names
 	pyperf_flags="-b $benchmarks"
 fi
 
