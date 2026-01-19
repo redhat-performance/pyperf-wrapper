@@ -24,6 +24,7 @@ PYTHON_VERSION=""
 PYPERF_VERSION="1.11.0"
 copy_dirs=""
 benchmarks="all"
+test_name="pyperf"
 
 base_dir=$(dirname $(realpath $0))
 #
