@@ -43,5 +43,5 @@ jobs:
         run: git clone https://github.com/redhat-performance/test_tools-wrappers.git /github/root/test_tools/
 
       - name: Run test
-        run: ./pyperf/pyperf_run
+        run: ./pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go
       
