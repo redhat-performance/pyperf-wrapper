@@ -166,14 +166,18 @@ generate_csv_file()
 		let "res_count=${res_count}+1"
 		value_sum=`echo "${value}+${value_sum}" | bc -l`
 	done < "${1}.results"
-	results=`echo "${value_sum}/${res_count}" | bc -l`
-	printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
-	if [[ $to_use_pcp -eq 1 ]]; then
-		metric_name="pyperf_${test_name}"
-		ns_results=$($TOOLS_BIN/convert_val --from_unit $unit --to_unit ns --time_val --value $results | sed -e 's/ns//g')
-		# Cannot use convert_val directly since it does not support floating point output
-		sec_results=$(echo "$ns_results/1000000000" | bc -l)
-		result2pcp "$metric_name" "${sec_results}"
+
+	if [[ $test_name != *"WARNING:"* ]]; then
+		results=`echo "${value_sum}/${res_count}" | bc -l`
+		printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+
+		if [[ $to_use_pcp -eq 1 ]]; then
+			metric_name="pyperf_${test_name}"
+			ns_results=$($TOOLS_BIN/convert_val --from_unit $unit --to_unit ns --time_val --value $results | sed -e 's/ns//g')
+			# Cannot use convert_val directly since it does not support floating point output
+			sec_results=$(echo "$ns_results/1000000000" | bc -l)
+			result2pcp "$metric_name" "${sec_results}"
+		fi
 	fi
 }
 
