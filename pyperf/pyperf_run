@@ -354,13 +354,13 @@ if [[  $to_no_pkg_install -eq 0 ]]; then
 		exit_out "Unsupported python binary $python_bin_name, exiting" 1
 	fi
 
-	$TOOLS_BIN/package_tool --wrapper_config $python_dep_file
+	package_tool --wrapper_config $python_dep_file
 
 	if [[ $? -ne 0 ]]; then
 		exit_out "Error installing needed python dependencies" 1
 	fi
 
-	$TOOLS_BIN/package_tool --wrapper_config $base_dir/../pyperf.json $pkg_list --pip_packages "pyperformance==$PYPERF_VERSION"
+	package_tool --wrapper_config $base_dir/../pyperf.json $pkg_list --pip_packages "pyperformance==$PYPERF_VERSION"
 
 	if [[ $? -ne 0 ]]; then
 		exit_out "Error installing system packages" 1
