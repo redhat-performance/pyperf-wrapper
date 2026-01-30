@@ -34,10 +34,18 @@ jobs:
         run: podman exec target git clone https://github.com/redhat-performance/test_tools-wrappers.git test_tools/      
 
       - name: Run test
-        run: podman exec target ./pyperf-wrapper/pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go --use_pcp 1 --debug 2>&1 | tee run.log
+        run: podman exec target ./pyperf-wrapper/pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go --use_pcp 1 --debug 2>&1 | tee pyperf_run.log
+      
+      - name: Dump openmetrics
+        run: podman exec target find /tmp -name "pyperf.0" -exec pmrep -a {} openmetrics.workload \; | tee pyperf_pmrep.txt 
       
       - name: Retreive test files
         run: podman cp target:/tmp/results_pyperf.zip results_pyperf.zip
       
       - name: Extract test archives
         run: unzip results_pyperf.zip && tar -xf results_pyperf_tuned_none.tar
+
+      - name: Stow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: pyperf*
