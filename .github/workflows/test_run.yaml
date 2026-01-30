@@ -12,36 +12,28 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - name: Amazon Linux 2023
-            image: public.ecr.aws/amazonlinux/amazonlinux:2023
-            initScript: >
-              dnf install -y git jq diffutils tar util-linux
           - name: Ubuntu 24.04
-            image: ubuntu:24.04
+            image: quay.io/zathras/ubuntu-systemd:24.04
             initScript: >
               apt update &&
-              apt install -y git jq
-          - name: CentOS 9
-            image: quay.io/centos/centos:stream9
-            initScript: >
-              dnf install -y git jq util-linux diffutils
-          - name: CentOS 10
-            image: quay.io/centos/centos:stream10
-            initScript: >
-              dnf install -y git jq util-linux diffutils
+              apt install -y git jq python3-requests
     name: ${{ matrix.name }}
-    container:
-      image: ${{ matrix.image }}
     steps:
-      - name: Initialize ${{ matrix.name }}
-        run: ${{ matrix.initScript }}
+      - name: Setup podman
+        run: apt update && apt install -y podman
 
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Start container
+        run: podman run --privileged --name target -d -v $PWD:/root/pyperf:z ${{ matrix.image }}
+      
+      - name: Initialize ${{ matrix.name }}
+        run: podman exec target '${{ matrix.initScript }}'
+
       - name: Checkout test_tools
-        run: git clone https://github.com/redhat-performance/test_tools-wrappers.git /github/root/test_tools/
+        run: podman exec target git clone https://github.com/redhat-performance/test_tools-wrappers.git test_tools/
 
       - name: Run test
-        run: ./pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go
+        run: podman exec ./pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go --use_pcp 1 --debug
       
