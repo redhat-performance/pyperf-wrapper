@@ -20,7 +20,7 @@ jobs:
     name: ${{ matrix.name }}
     steps:
       - name: Setup podman
-        run: apt update && apt install -y podman
+        run: sudo apt update && sudo apt install -y podman
 
       - name: Checkout code
         uses: actions/checkout@v6
