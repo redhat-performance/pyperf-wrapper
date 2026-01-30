@@ -25,14 +25,14 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Start container
-        run: podman run --privileged --name target -d -v $PWD:/root/pyperf:z ${{ matrix.image }}
+        run: podman run --privileged --name target -d -v $PWD:/root/pyperf-wrapper:z ${{ matrix.image }}
       
       - name: Initialize ${{ matrix.name }}
         run: podman exec target ${{ matrix.initScript }}
 
       - name: Checkout test_tools
-        run: podman exec target git clone https://github.com/redhat-performance/test_tools-wrappers.git test_tools/
+        run: podman exec target git clone https://github.com/redhat-performance/test_tools-wrappers.git test_tools/      
 
       - name: Run test
-        run: podman exec target ./pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go --use_pcp 1 --debug
+        run: podman exec target ./pyperf-wrapper/pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go --use_pcp 1 --debug
       
