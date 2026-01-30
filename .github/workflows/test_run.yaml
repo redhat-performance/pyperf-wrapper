@@ -15,7 +15,6 @@ jobs:
           - name: Ubuntu 24.04
             image: quay.io/zathras/ubuntu-systemd:24.04
             initScript: >
-              apt update &&
               apt install -y git jq python3-requests
     name: ${{ matrix.name }}
     steps:
@@ -29,7 +28,7 @@ jobs:
         run: podman run --privileged --name target -d -v $PWD:/root/pyperf:z ${{ matrix.image }}
       
       - name: Initialize ${{ matrix.name }}
-        run: podman exec target '${{ matrix.initScript }}'
+        run: podman exec target ${{ matrix.initScript }}
 
       - name: Checkout test_tools
         run: podman exec target git clone https://github.com/redhat-performance/test_tools-wrappers.git test_tools/
