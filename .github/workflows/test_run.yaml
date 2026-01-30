@@ -34,5 +34,5 @@ jobs:
         run: podman exec target git clone https://github.com/redhat-performance/test_tools-wrappers.git test_tools/
 
       - name: Run test
-        run: podman exec ./pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go --use_pcp 1 --debug
+        run: podman exec target ./pyperf/pyperf_run --pyperf_benchmarks 2to3,dulwich_log,go --use_pcp 1 --debug
       
