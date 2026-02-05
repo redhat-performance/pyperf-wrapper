@@ -1,0 +1,6 @@
+[rag_arguments]
+enable_rag=true
+rag_repo_list= [
+    "redhat-performance/test_tools-wrappers",
+    "redhat-performance/pyperf-wrapper"
+]
