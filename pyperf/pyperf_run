@@ -127,10 +127,11 @@ generate_csv_file()
 	reduce=0
 	res_count=0
 	value_sum=0
+	start_time=$2
+	end_time=$3
 
-  $TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version "py${PYTHON_VERSION}_$PYPERF_VERSION" --test_name $test_name_run 
+  $TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version "py${PYTHON_VERSION}_$PYPERF_VERSION" --test_name $test_name_run --field_header "Test,Avg,Unit"
 
-	echo "Test:Avg:Unit" >> "${1}.csv"
 	while IFS= read -r line
 	do
 		if [[ $test_name == "" ]]; then
@@ -142,7 +143,7 @@ generate_csv_file()
 			if [[ $reduce -eq 2 ]]; then
 				if [[ $test_name != *"WARNING:"* ]]; then
 					results=`echo "${value_sum}/${res_count}" | bc -l`
-					printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+					printf "%s,%.2f,%s,%s,%s\n" $test_name $results $unit $start_time $end_time >> ${1}.csv
 					
 					if [[ $to_use_pcp -eq 1 ]]; then
 						metric_name="pyperf_${test_name}"
@@ -170,7 +171,7 @@ generate_csv_file()
 
 	if [[ $test_name != *"WARNING:"* ]]; then
 		results=`echo "${value_sum}/${res_count}" | bc -l`
-		printf "%s:%.2f:%s\n" $test_name $results $unit >> ${1}.csv
+		printf "%s,%.2f,%s,%s,%s\n" $test_name $results $unit $start_time $end_time >> ${1}.csv
 
 		if [[ $to_use_pcp -eq 1 ]]; then
 			metric_name="pyperf_${test_name}"
@@ -388,11 +389,12 @@ if [[ "$benchmarks" != "all" ]]; then
 	verify_benchmark_names
 	pyperf_flags="-b $benchmarks"
 fi
-
+start_time=$(retrieve_time_stamp)
 $python_exec -m pyperformance run --output  ${pyresults}.json $pyperf_flags
 if [ $? -ne 0 ]; then
 	exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
 fi
+end_time=$(retrieve_time_stamp)
 
 $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
 if [ $? -ne 0 ]; then
@@ -402,7 +404,7 @@ else
 	echo Ran > test_results_report
 fi
 
-generate_csv_file ${pyresults}
+generate_csv_file ${pyresults} ${start_time} ${end_time}
 
 if [[ $to_use_pcp -eq 1 ]]; then
 	stop_pcp_subset
