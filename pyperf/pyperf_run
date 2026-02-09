@@ -26,6 +26,9 @@ copy_dirs=""
 benchmarks="all"
 test_name="pyperf"
 
+TOOLS_BIN="$HOME/test_tools"
+export TOOLS_BIN
+
 base_dir=$(dirname $(realpath $0))
 #
 # To make sure.
@@ -104,8 +107,8 @@ install_tools()
 	# Check to see if the test tools directory exists.  If it does, we do not need to
 	# clone the repo.
 	#
-	if [ ! -d "test_tools" ]; then
-		git clone $tools_git test_tools
+	if [ ! -d "$TOOLS_BIN" ]; then
+		git clone $tools_git "$TOOLS_BIN"
 		if [ $? -ne 0 ]; then
 			exit_out "pulling git $tools_git failed." 1
 		fi
@@ -243,7 +246,7 @@ else
 fi
 
 # Gather hardware information
-${curdir}/test_tools/gather_data ${curdir}
+$TOOLS_BIN/gather_data ${curdir}
 
 
 if [ ! -f "/tmp/pyperf.out" ]; then
@@ -277,7 +280,7 @@ if [ -d "workloads" ]; then
 	done
 fi
 
-source test_tools/general_setup "$@"
+source $TOOLS_BIN/general_setup "$@"
 
 ARGUMENT_LIST=(
 	"pyperf_version"
@@ -420,5 +423,5 @@ fi
 #
 # Process the data.
 #
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
 exit 0
