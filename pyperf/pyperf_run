@@ -85,6 +85,9 @@ setup_pyperformance()
 	$python_exec -m pyperformance venv create
 	venv_path=$($python_exec -m pyperformance venv show | sed -e "s/Virtual environment path: //g" -e "s/ (already created)//" )
 
+	if [[ -z "$venv_path" ]]; then
+		exit_out "Error: Could not determine pyperformance venv path, exiting" 1
+	fi
 	if [[ ! -x "$venv_path/bin/python3" ]]; then
 		exit_out "Error: Could not find interpreter at $venv_path/bin/python3, exiting" 1
 	fi
