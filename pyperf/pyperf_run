@@ -94,7 +94,7 @@ setup_pyperformance()
 	# Skipping using pkg_tool to ensure that all relevant venv PATHs are honored
 	if [[ "$major" -le 1 ]] && [[ "$minor" -le 11 ]]; then
 		echo "Detected <=1.11.0, applying setuptools fix"
-		"$venv_path/bin/python3" install setuptools==81.0.0 # Execute venv pip instead
+		"$venv_path/bin/python3" -m pip install --upgrade setuptools==81.0.0 # Execute venv pip instead
 	fi
 }
 
