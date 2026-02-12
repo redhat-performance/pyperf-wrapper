@@ -25,6 +25,7 @@ PYPERF_VERSION="1.11.0"
 copy_dirs=""
 benchmarks="all"
 test_name="pyperf"
+rtc=0
 
 TOOLS_BIN="$HOME/test_tools"
 export TOOLS_BIN
@@ -266,22 +267,7 @@ fi
 # Gather hardware information
 $TOOLS_BIN/gather_data ${curdir}
 
-
-if [ ! -f "/tmp/pyperf.out" ]; then
-        command="${0} $@"
-        echo $command
-        $command 2>&1 | tee /tmp/pyperf.out
-	rtc=$?
-	if [ -f /tmp/pyperf.out ]; then
-		echo =================================
-		echo Output from the test.
-		echo =================================
-        	cat /tmp/pyperf.out
-        	rm /tmp/pyperf.out
-	fi
-        exit $rtc
-fi
-
+exec &> >(tee /tmp/pyperf.out)
 
 if [ -d "workloads" ]; then
 	#
@@ -432,6 +418,7 @@ generate_csv_file ${pyresults} ${start_time} ${end_time}
 
 $TOOLS_BIN/csv_to_json $to_json_flags --csv_file ${pyresults}.csv --output_file pyperf.json
 $TOOLS_BIN/verify_results $to_verify_flags --file pyperf.json --schema_file $to_script_dir/../pyperf_schema.py --class_name PyperfResults
+rtc=$?
 
 if [[ $to_use_pcp -eq 1 ]]; then
 	stop_pcp_subset
@@ -448,4 +435,4 @@ fi
 # Process the data.
 #
 ${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
-exit 0
+exit $rtc
