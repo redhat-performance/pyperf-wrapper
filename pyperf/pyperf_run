@@ -82,16 +82,15 @@ setup_pyperformance()
 	major=$(echo $PYPERF_VERSION | cut -d. -f1)
 	minor=$(echo $PYPERF_VERSION | cut -d. -f2)
 
+	$python_exec -m pyperformance venv create
+	venv_path=$($python_exec -m pyperformance venv show | sed -e "s/Virtual environment path: //g" -e "s/ (already created)//" )
+
 	# Revert to setuptools v81.0.0 due to `pkg_resources` removal at v82.0.0
 	# https://setuptools.pypa.io/en/stable/history.html#deprecations-and-removals
 	# Skipping using pkg_tool to ensure that all relevant venv PATHs are honored
 	if [[ "$major" -le 1 ]] && [[ "$minor" -le 11 ]]; then
 		echo "Detected <=1.11.0, applying setuptools fix"
-		$python_exec -m pyperformance venv create
-		venv_path=$($python_exec -m pyperformance venv show | cut -d: -f2 | awk '{ print $1 }')
-		source $venv_path/bin/activate
-		python3 -m pip install setuptools==81.0.0 #Operating within venv, so $python_exec is not needed
-		deactivate
+		$venv_path/bin/pip3 install setuptools==81.0.0 # Execute venv pip instead
 	fi
 }
 
