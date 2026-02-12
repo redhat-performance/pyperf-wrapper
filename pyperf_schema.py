@@ -32,7 +32,7 @@ class TestNames(Enum):
     coroutines = "coroutines"
     coverage = "coverage"
     crypto_pyaes = "crypto_pyaes"
-    dask = "dasks"
+    dask = "dask"
     deepcopy = "deepcopy"
     deepcopy_reduce = "deepcopy_reduce"
     deepcopy_memo = "deepcopy_memo"

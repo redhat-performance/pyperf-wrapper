@@ -85,12 +85,16 @@ setup_pyperformance()
 	$python_exec -m pyperformance venv create
 	venv_path=$($python_exec -m pyperformance venv show | sed -e "s/Virtual environment path: //g" -e "s/ (already created)//" )
 
+	if [[ ! -x "$venv_path/bin/python3" ]]; then
+		exit_out "Error: Could not find interpreter at $venv_path/bin/python3, exiting" 1
+	fi
+
 	# Revert to setuptools v81.0.0 due to `pkg_resources` removal at v82.0.0
 	# https://setuptools.pypa.io/en/stable/history.html#deprecations-and-removals
 	# Skipping using pkg_tool to ensure that all relevant venv PATHs are honored
 	if [[ "$major" -le 1 ]] && [[ "$minor" -le 11 ]]; then
 		echo "Detected <=1.11.0, applying setuptools fix"
-		$venv_path/bin/pip3 install setuptools==81.0.0 # Execute venv pip instead
+		"$venv_path/bin/python3" install setuptools==81.0.0 # Execute venv pip instead
 	fi
 }
 
