@@ -25,6 +25,10 @@ PYPERF_VERSION="1.11.0"
 copy_dirs=""
 benchmarks="all"
 test_name="pyperf"
+rtc=0
+
+TOOLS_BIN="$HOME/test_tools"
+export TOOLS_BIN
 
 base_dir=$(dirname $(realpath $0))
 #
@@ -73,6 +77,30 @@ verify_benchmark_names()
 	fi
 }
 
+setup_pyperformance()
+{
+	major=$(echo $PYPERF_VERSION | cut -d. -f1)
+	minor=$(echo $PYPERF_VERSION | cut -d. -f2)
+
+	$python_exec -m pyperformance venv create
+	venv_path=$($python_exec -m pyperformance venv show | sed -e "s/Virtual environment path: //g" -e "s/ (already created)//" )
+
+	if [[ -z "$venv_path" ]]; then
+		exit_out "Error: Could not determine pyperformance venv path, exiting" 1
+	fi
+	if [[ ! -x "$venv_path/bin/python3" ]]; then
+		exit_out "Error: Could not find interpreter at $venv_path/bin/python3, exiting" 1
+	fi
+
+	# Revert to setuptools v81.0.0 due to `pkg_resources` removal at v82.0.0
+	# https://setuptools.pypa.io/en/stable/history.html#deprecations-and-removals
+	# Skipping using pkg_tool to ensure that all relevant venv PATHs are honored
+	if [[ "$major" -le 1 ]] && [[ "$minor" -le 11 ]]; then
+		echo "Detected <=1.11.0, applying setuptools fix"
+		"$venv_path/bin/python3" -m pip install --upgrade setuptools==81.0.0 # Execute venv pip instead
+	fi
+}
+
 install_tools()
 {
 	show_usage=0
@@ -104,8 +132,8 @@ install_tools()
 	# Check to see if the test tools directory exists.  If it does, we do not need to
 	# clone the repo.
 	#
-	if [ ! -d "test_tools" ]; then
-		git clone $tools_git test_tools
+	if [ ! -d "$TOOLS_BIN" ]; then
+		git clone $tools_git "$TOOLS_BIN"
 		if [ $? -ne 0 ]; then
 			exit_out "pulling git $tools_git failed." 1
 		fi
@@ -243,24 +271,9 @@ else
 fi
 
 # Gather hardware information
-${curdir}/test_tools/gather_data ${curdir}
+$TOOLS_BIN/gather_data ${curdir}
 
-
-if [ ! -f "/tmp/pyperf.out" ]; then
-        command="${0} $@"
-        echo $command
-        $command 2>&1 | tee /tmp/pyperf.out
-	rtc=$?
-	if [ -f /tmp/pyperf.out ]; then
-		echo =================================
-		echo Output from the test.
-		echo =================================
-        	cat /tmp/pyperf.out
-        	rm /tmp/pyperf.out
-	fi
-        exit $rtc
-fi
-
+exec &> >(tee /tmp/pyperf.out)
 
 if [ -d "workloads" ]; then
 	#
@@ -277,7 +290,7 @@ if [ -d "workloads" ]; then
 	done
 fi
 
-source test_tools/general_setup "$@"
+source $TOOLS_BIN/general_setup "$@"
 
 ARGUMENT_LIST=(
 	"pyperf_version"
@@ -389,6 +402,9 @@ if [[ "$benchmarks" != "all" ]]; then
 	verify_benchmark_names
 	pyperf_flags="-b $benchmarks"
 fi
+
+setup_pyperformance
+
 start_time=$(retrieve_time_stamp)
 $python_exec -m pyperformance run --output  ${pyresults}.json $pyperf_flags
 if [ $? -ne 0 ]; then
@@ -406,6 +422,10 @@ fi
 
 generate_csv_file ${pyresults} ${start_time} ${end_time}
 
+$TOOLS_BIN/csv_to_json $to_json_flags --csv_file ${pyresults}.csv --output_file pyperf.json
+$TOOLS_BIN/verify_results $to_verify_flags --file pyperf.json --schema_file $to_script_dir/../pyperf_schema.py --class_name PyperfResults
+rtc=$?
+
 if [[ $to_use_pcp -eq 1 ]]; then
 	stop_pcp_subset
 	stop_pcp
@@ -420,5 +440,5 @@ fi
 #
 # Process the data.
 #
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
-exit 0
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
+exit $rtc
