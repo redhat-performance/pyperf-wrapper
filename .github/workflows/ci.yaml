@@ -14,11 +14,11 @@ jobs:
       matrix:
         include:
           - name: Amazon Linux 2023
-            container: ci/amazonlinux.yaml
+            container: pyperf-wrapper/ci/amazonlinux.yaml
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt update && sudo apt install -y podman && pip install container-sucks --break-system-packages
       - name: Setup ${{ matrix.name }}
-        run: sucks ${{ matrix.container }} setup -v $PWD:/opt/pyperf-wrapper:z
+        run: sucks ${{ matrix.container }} setup -v $PWD/pyperf-wrapper:/opt/pyperf-wrapper:z
       - name: Run test
         run: sucks ${{ matrix.container }} ci
