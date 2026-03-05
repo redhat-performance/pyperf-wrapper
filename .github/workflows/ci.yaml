@@ -1,7 +1,6 @@
 name: Wrapper CI
 
-on:
-  push:
+on: push
 
 jobs:
   wrapper_ci:
