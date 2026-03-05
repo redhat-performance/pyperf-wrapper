@@ -1,0 +1,6 @@
+name: Amazon Linux 2023
+image: quay.io/zathras/amazon-init:latest
+initSteps:
+  - dnf install -y git jq util-linux hostname which tar
+ciSteps:
+  - /opt/pyperf-wrapper/pyperf/pyperf_run --pyperf_benchmarks 2to3,dask,dulwich_log
