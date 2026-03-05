@@ -1,6 +1,9 @@
 name: Wrapper CI
 
-on: push
+on:
+  push:
+    branches:
+      - '**'
 
 jobs:
   wrapper_ci:
