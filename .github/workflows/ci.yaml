@@ -9,10 +9,11 @@ jobs:
       fail-fast: false #We want to know if a wrapper fails on one OS or all of them
       matrix:
         include:
-          - {container: ci/amazonlinux.yml, name: Amazon Linux}
+          - name: Amazon Linux 2023
+            container: ci/amazonlinux.yaml
     steps:
       - uses: actions/checkout@v4
-      - run: apt update && apt install -y podman && pip install container-sucks
+      - run: sudo apt update && sudo apt install -y podman && pip install container-sucks
       - name: Setup ${{ matrix.name }}
         run: sucks ${{ matrix.container }} setup -v $PWD:/opt/pyperf-wrapper:z
       - name: Run test
