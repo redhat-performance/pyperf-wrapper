@@ -17,7 +17,7 @@ jobs:
             container: ci/amazonlinux.yml
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt update && sudo apt install -y podman && pip install container-sucks --break-system-packages && sudo systemctl start now podman.socket
+      - run: sudo apt update && sudo apt install -y podman && pip install container-sucks --break-system-packages && sudo systemctl start podman.socket
       - name: Setup ${{ matrix.name }}
         run: sucks ${{ matrix.container }} setup -v $PWD/pyperf-wrapper:/opt/pyperf-wrapper:z
       - name: Run test
