@@ -1,0 +1,6 @@
+name: CentOS 9
+image: quay.io/zathras/centos-init:stream9
+initSteps:
+  - dnf install -y git jq util-linux hostname which tar bc zip
+ciSteps:
+  - /opt/pyperf-wrapper/pyperf/pyperf_run --pyperf_benchmarks 2to3,dask,dulwich_log

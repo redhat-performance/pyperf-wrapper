@@ -15,6 +15,12 @@ jobs:
         include:
           - name: Amazon Linux 2023
             container: ci/amazonlinux.yml
+          - name: Ubuntu 24.04
+            container: ci/ubuntu2404.yml
+          - name: CentOS 9
+            container: ci/centos9.yml
+          - name: CentOS 10
+            container: ci/centos10.yml
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt update && sudo apt install -y podman && pip install container-sucks --break-system-packages && systemctl start --user podman.socket

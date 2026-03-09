@@ -1,0 +1,7 @@
+name: Ubuntu 24.04
+image: quay.io/zathras/ubuntu-init:24.04
+initSteps:
+  - apt update
+  - apt install -y git jq util-linux hostname which tar python3-requests
+ciSteps:
+  - /opt/pyperf-wrapper/pyperf/pyperf_run --pyperf_benchmarks 2to3,dask,dulwich_log

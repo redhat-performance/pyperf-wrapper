@@ -1,5 +1,5 @@
-name: Amazon Linux 2023
-image: quay.io/zathras/amazonlinux-init:2023
+name: CentOS 10
+image: quay.io/zathras/centos-init:stream10
 initSteps:
   - dnf install -y git jq util-linux hostname which tar
 ciSteps:
