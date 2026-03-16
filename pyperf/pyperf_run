@@ -466,5 +466,5 @@ fi
 #
 # Process the data.
 #
-${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*" $copy_dirs
 exit $rtc
