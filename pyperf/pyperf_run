@@ -445,6 +445,9 @@ fi
 end_time=$(retrieve_time_stamp)
 
 $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
+if [[ $?  -ne 0 ]]; then
+	exit_out "Error: $python_exec -m pyperf dump  ${pyresults}.json" $E_GENERAL
+fi
 
 generate_csv_file ${pyresults} ${start_time} ${end_time}
 
