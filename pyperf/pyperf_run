@@ -53,8 +53,8 @@ usage()
 	echo "--python_exec_path: Python to set via alternatives"
 	echo "--python_pkgs: comma seprated list of python packages to install"
 	echo "--pyperf_benchmarks: Comma separated list of pyperformance benchmarks to run.  Default is to run all tests."
-	source test_tools/general_setup --usage
-        exit 1
+	source $TOOLS_BIN/general_setup --usage
+        exit $E_USAGE
 }
 
 verify_benchmark_names()
@@ -73,7 +73,7 @@ verify_benchmark_names()
 	rm -f $benchmark_file
 
 	if [[ -n "$invalid_benchmarks" ]]; then
-		exit_out "Error: Could not find the following benchmarks $invalid_benchmarks" 1
+		exit_out "Error: Could not find the following benchmarks $invalid_benchmarks" $E_GENERAL
 	fi
 }
 
@@ -86,10 +86,10 @@ setup_pyperformance()
 	venv_path=$($python_exec -m pyperformance venv show | sed -e "s/Virtual environment path: //g" -e "s/ (already created)//" )
 
 	if [[ -z "$venv_path" ]]; then
-		exit_out "Error: Could not determine pyperformance venv path, exiting" 1
+		exit_out "Error: Could not determine pyperformance venv path, exiting" $E_GENERAL
 	fi
 	if [[ ! -x "$venv_path/bin/python3" ]]; then
-		exit_out "Error: Could not find interpreter at $venv_path/bin/python3, exiting" 1
+		exit_out "Error: Could not find interpreter at $venv_path/bin/python3, exiting" $E_GENERAL
 	fi
 
 	# Revert to setuptools v81.0.0 due to `pkg_resources` removal at v82.0.0
@@ -99,6 +99,40 @@ setup_pyperformance()
 		echo "Detected <=1.11.0, applying setuptools fix"
 		"$venv_path/bin/python3" -m pip install --upgrade setuptools==81.0.0 # Execute venv pip instead
 	fi
+}
+
+attempt_tools_wget()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                wget ${tools_git}/archive/refs/heads/main.zip
+                if [[ $? -eq 0 ]]; then
+                        unzip -q main.zip
+                        mv test_tools-wrappers-main ${TOOLS_BIN}
+                        rm main.zip
+                fi
+        fi
+}
+
+attempt_tools_curl()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                curl -L -O ${tools_git}/archive/refs/heads/main.zip
+                if [[ $? -eq 0 ]]; then
+                        unzip -q main.zip
+                        mv test_tools-wrappers-main ${TOOLS_BIN}
+                        rm main.zip
+                fi
+        fi
+}
+
+attempt_tools_git()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                git clone $tools_git "$TOOLS_BIN"
+                if [ $? -ne 0 ]; then
+                        exit_out "Error: pulling git $tools_git failed." 101
+                fi
+        fi
 }
 
 install_tools()
@@ -132,12 +166,10 @@ install_tools()
 	# Check to see if the test tools directory exists.  If it does, we do not need to
 	# clone the repo.
 	#
-	if [ ! -d "$TOOLS_BIN" ]; then
-		git clone $tools_git "$TOOLS_BIN"
-		if [ $? -ne 0 ]; then
-			exit_out "pulling git $tools_git failed." 1
-		fi
-	fi
+
+	attempt_tools_wget
+	attempt_tools_curl
+	attempt_tools_git
 
 	if [ $show_usage -eq 1 ]; then
 		usage $1
@@ -220,15 +252,15 @@ pip3_install()
 	$python_exec -m pip --version
 	if [[ $? -ne 0 ]]; then
 			if [[ $install_pip -eq 1 ]]; then
-			$python_exec -m ensurepip || exit_out "Failed to install pip." 1
+			$python_exec -m ensurepip || exit_out "Failed to install pip." $E_GENERAL
 		else
-			exit_out "Pip is not available, exiting out" 1
+			exit_out "Pip is not available, exiting out" $E_GENERAL
 		fi
 	fi
 
 	$python_exec -m pip install -q $1
 	if [[ $? -ne 0 ]]; then
-		exit_out "Pip not available for install of $1 failed." 1
+		exit_out "Pip not available for install of $1 failed." $E_GENERAL
 	fi
 }
 #
@@ -358,26 +390,26 @@ if [[ ${python_pkgs} != "" ]]; then
 	pkg_list="--packages `echo $python_pkgs | sed "s/,/ /g"`"
 fi
 if ! command -v $python_exec; then
-	exit_out "Error: Designated python executable, $python_exec, not present"
+	exit_out "Error: Designated python executable, $python_exec, not present" $E_GENERAL
 fi
 
 if [[  $to_no_pkg_install -eq 0 ]]; then
 	python_bin_name=$(basename $python_exec)
 	python_dep_file="$base_dir/../python_deps/$python_bin_name.json"
 	if [[ ! -f "$python_dep_file" ]]; then
-		exit_out "Unsupported python binary $python_bin_name, exiting" 1
+		exit_out "Unsupported python binary $python_bin_name, exiting" $E_GENERAL
 	fi
 
 	$TOOLS_BIN/package_tool --wrapper_config $python_dep_file
 
 	if [[ $? -ne 0 ]]; then
-		exit_out "Error installing needed python dependencies" 1
+		exit_out "Error installing needed python dependencies" $E_GENERAL
 	fi
 
 	$TOOLS_BIN/package_tool --wrapper_config $base_dir/../pyperf.json $pkg_list --pip_packages "pyperformance==$PYPERF_VERSION"
 
 	if [[ $? -ne 0 ]]; then
-		exit_out "Error installing system packages" 1
+		exit_out "Error installing system packages" $E_GENERAL
 	fi
 fi
 
@@ -408,16 +440,13 @@ setup_pyperformance
 start_time=$(retrieve_time_stamp)
 $python_exec -m pyperformance run --output  ${pyresults}.json $pyperf_flags
 if [ $? -ne 0 ]; then
-	exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" 1
+	exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" $E_GENERAL
 fi
 end_time=$(retrieve_time_stamp)
 
 $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
-if [ $? -ne 0 ]; then
-	echo "Failed: $python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results" 1
-	echo Failed > test_results_report
-else
-	echo Ran > test_results_report
+if [[ $?  -ne 0 ]]; then
+	exit_out "Error: $python_exec -m pyperf dump  ${pyresults}.json" $E_GENERAL
 fi
 
 generate_csv_file ${pyresults} ${start_time} ${end_time}
@@ -440,5 +469,5 @@ fi
 #
 # Process the data.
 #
-${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*,test_results_report" $copy_dirs
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*" $copy_dirs
 exit $rtc
