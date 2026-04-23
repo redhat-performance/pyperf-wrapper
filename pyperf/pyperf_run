@@ -244,7 +244,6 @@ generate_csv_file()
 			metric_name="pyperf_${test_name}"
 			sec_results=$(echo "$results/1000000000" | bc -l)
 			result2pcp "$metric_name" "${sec_results}"
-			result2pcp "$metric_name" "${sec_results}"
 		fi
 	fi
 }
