@@ -206,10 +206,9 @@ generate_csv_file()
 			let "reduce=$reduce+1"
 			if [[ $reduce -eq 2 ]]; then
 				if [[ $test_name != *"WARNING:"* ]]; then
-					# Cannot use convert_val directly since it does not support floating point output
-					results=$(echo "${value_sum}/${res_count}" | bc -l | cut -d'.' -f1 )
-					sec_results=$(echo "$results/1000000000" | bc -l)
-					printf "%s,%f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >> ${1}.csv
+					results=$(echo "${value_sum}/${res_count}" | bc)
+					sec_results=$(${TOOLS_BIN}/convert_val --time_val --from_unit  ns --to_unit secs --value $results --float --no_unit)
+					printf "%s,%.9f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >> ${1}.csv
 					
 					if [[ $to_use_pcp -eq 1 ]]; then
 						metric_name="pyperf_${test_name}"
@@ -228,19 +227,18 @@ generate_csv_file()
 		fi
 		value=`echo $line | cut -d' ' -f 4`
 		unit=`echo $line | cut -d' ' -f 5`
-		cnv_val=$($TOOLS_BIN/convert_val --time_val --from_unit  $unit --to_unit ns --value $value | sed "s/ns//g")
+		cnv_val=$($TOOLS_BIN/convert_val --time_val --from_unit  $unit --to_unit ns --value $value --no_unit)
 		let "res_count=${res_count}+1"
-		value_sum=`echo "${cnv_val}+${value_sum}" | bc -l`
+		value_sum=`echo "${cnv_val}+${value_sum}" | bc`
 	done < "${1}.results"
 
 	if [[ $test_name != *"WARNING:"* ]]; then
-		results=$(echo "${value_sum}/${res_count}" | bc -l | cut -d'.' -f1 )
-		sec_results=$(echo "$results/1000000000" | bc -l)
-		printf "%s,%f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >> ${1}.csv
+		results=$(echo "${value_sum}/${res_count}" | bc | cut -d'.' -f1 )
+		sec_results=$(${TOOLS_BIN}/convert_val --time_val --from_unit  ns --to_unit secs --value $results --float --no_unit)
+		printf "%s,%.9f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >> ${1}.csv
 
 		if [[ $to_use_pcp -eq 1 ]]; then
 			metric_name="pyperf_${test_name}"
-			sec_results=$(echo "$results/1000000000" | bc -l)
 			result2pcp "$metric_name" "${sec_results}"
 		fi
 	fi
