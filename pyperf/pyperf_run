@@ -207,6 +207,9 @@ generate_csv_file()
 			if [[ $reduce -eq 2 ]]; then
 				if [[ $test_name != *"WARNING:"* ]]; then
 					results=$(echo "${value_sum}/${res_count}" | bc)
+					#
+					# Timings is in seconds
+					#
 					sec_results=$(${TOOLS_BIN}/convert_val --time_val --from_unit  ns --to_unit secs --value $results --float --no_unit)
 					printf "%s,%.9f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >> ${1}.csv
 					
@@ -234,6 +237,9 @@ generate_csv_file()
 
 	if [[ $test_name != *"WARNING:"* ]]; then
 		results=$(echo "${value_sum}/${res_count}" | bc | cut -d'.' -f1 )
+		#
+		# Timings is in seconds
+		#
 		sec_results=$(${TOOLS_BIN}/convert_val --time_val --from_unit  ns --to_unit secs --value $results --float --no_unit)
 		printf "%s,%.9f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >> ${1}.csv
 
