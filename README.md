@@ -1,39 +1,363 @@
-Automation wrapper for pyper
+# pyperformance (pyperf) Benchmark Wrapper
 
-Description:
-         From website: The pyperformance project is intended to be an authoritative source of benchmarks
-         for all Python implementations. The focus is on real-world benchmarks, rather than synthetic
-         benchmarks, using whole applications when possible.
+## Description
 
-Location of underlying workload: https://github.com/python/pyperformance
+This wrapper facilitates the automated execution of the pyperformance benchmark suite. pyperformance is the official Python benchmark suite maintained by the Python project, measuring Python interpreter performance across real-world application workloads rather than synthetic micro-benchmarks. Results are reported as average execution time per benchmark in seconds.
 
-Packages required: numactl,perf
+The wrapper provides:
+- Automated pyperformance installation, virtual environment setup, and execution.
+- Support for x86_64 (AMD/Intel) and aarch64 (ARM) architectures.
+- Configurable pyperformance version selection.
+- Selective benchmark execution or full-suite runs.
+- Automatic Python version detection and dependency management.
+- Result collection, CSV/JSON processing, and Pydantic schema validation.
+- System configuration metadata capture.
+- Integration with test_tools framework.
+- Optional Performance Co-Pilot (PCP) and pbench integration.
+
+## Command-Line Options
+
+```
+pyperf Options:
+  --pyperf_version <value>: Version of pyperformance to install and run.
+      Defaults to 1.11.0.
+  --python_exec <path>: Python executable to use for running benchmarks.
+      Defaults to python3.
+  --python_pkgs <packages>: Comma-separated list of additional Python packages to install.
+  --pyperf_benchmarks <benchmarks>: Comma-separated list of specific benchmarks to run.
+      Defaults to all benchmarks. Example: "2to3,nbody,go".
+  --install_pip: Install pip if not available on the system (requires pip3_install integration).
+
+General test_tools options:
+  --home_parent <value>: Parent home directory. If not set, defaults to current working directory.
+  --host_config <value>: Host configuration name, defaults to current hostname.
+  --iterations <value>: Number of times to run the test, defaults to 1.
+  --pbench: Enable pbench-user-benchmark integration.
+  --pbench_user <user>: User who started the pbench test.
+  --pbench_copy: Copy pbench data instead of moving it.
+  --pbench_stats <stats>: Pbench statistics to gather.
+  --run_label <name>: Label for pbench run identification.
+  --run_user: User that is actually running the test on the test system. Defaults to current user.
+  --sys_type: Type of system working with (aws, azure, hostname). Defaults to hostname.
+  --sysname: Name of the system running, used in determining config files. Defaults to hostname.
+  --tuned_setting: Used in naming the results directory. For RHEL, defaults to current active tuned profile.
+      For non-RHEL systems, defaults to 'none'.
+  --use_pcp: Enable Performance Co-Pilot monitoring during test execution.
+  --tools_git <value>: Git repo to retrieve the required tools from.
+      Default: https://github.com/redhat-performance/test_tools-wrappers
+  --usage: Display this usage message.
+```
+
+## What the Script Does
+
+The `pyperf_run` script performs the following workflow:
+
+1. **Environment Setup**:
+   - Clones the test_tools-wrappers repository if not present (default: ~/test_tools).
+   - Attempts download via wget, then curl, then git clone as fallback.
+   - Sources error codes and general setup utilities.
+   - Collects system hardware information via gather_data.
+
+2. **Python Validation and Package Installation**:
+   - Detects the Python version from the configured executable.
+   - Validates the Python executable exists.
+   - Installs Python runtime dependencies (python3, python3-devel, python3-pip) via `package_tool` using python_deps/python3.json.
+   - Installs system packages (bc, git, numactl, etc.) and pip dependencies (psutil, packaging, pyparsing, pyperf, toml) along with `pyperformance==<version>` via a second `package_tool` call using pyperf.json.
+   - Any additional packages specified via `--python_pkgs` are passed to the same `package_tool` call.
+   - Dependencies are defined for different OS variants (RHEL, Ubuntu, Amazon Linux).
+
+3. **PCP Setup** (optional):
+   - If `--use_pcp` is enabled, sources pcp_commands.inc and initializes PCP monitoring.
+   - Creates a timestamped PCP data directory.
+   - Starts PCP collection with `start_pcp` and `start_pcp_subset`.
+
+4. **Benchmark Validation**:
+   - If specific benchmarks are requested (not "all"), validates each name against the list from `pyperformance list`.
+   - Exits with an error if any invalid benchmark names are found.
+
+5. **Virtual Environment Setup**:
+   - Creates a pyperformance-managed virtual environment: `python3 -m pyperformance venv create`.
+   - Retrieves the venv path via `python3 -m pyperformance venv show`.
+   - For pyperformance versions <= 1.11.0, downgrades setuptools to v81.0.0 inside the venv to work around the pkg_resources removal in setuptools v82.0.0.
+
+6. **Test Execution**:
+   - Records start timestamp.
+   - Runs pyperformance: `python3 -m pyperformance run --output <file>.json [benchmark flags]`.
+   - Records end timestamp.
+   - Converts JSON output to human-readable format via `pyperf dump`.
+
+7. **Result Processing**:
+   - Parses the pyperf dump output to extract per-benchmark results.
+   - Extracts test names, individual run values, and units.
+   - Converts all time values to nanoseconds for intermediate calculations to preserve precision.
+   - Calculates the average for each benchmark.
+   - Converts final averages from nanoseconds to seconds.
+   - Generates CSV file with columns: Test, Avg, Unit, Start_Date, End_Date.
+   - Publishes metrics to PCP (if enabled) via result2pcp.
+
+8. **Validation**:
+   - Converts CSV to JSON via csv_to_json from test_tools.
+   - Validates results against the Pydantic schema (pyperf_schema.py).
+   - Ensures all required fields are present, Avg is positive and finite, and test names are valid.
+   - Uses verify_results from test_tools.
+
+9. **Output**:
+    - Saves all results and metadata via save_results.
+    - Stores raw JSON, human-readable results, and processed CSV in the python_results directory.
+    - Archives results and execution log.
+    - Stops PCP monitoring (if enabled).
+
+## Dependencies
+
+**pyperformance**: Installed automatically via pip at the specified version (default: 1.11.0) from PyPI.
+
+**RHEL / Amazon Linux packages**: bc, git, zip, unzip, numactl, perf, wget
+
+**Ubuntu packages**: bc, git, python3-lib2to3, zip, unzip, numactl, python3-pip, wget
+
+**Python runtime packages** (all distributions):
+- RHEL/Amazon Linux: python3, python3-devel, python3-pip
+- Ubuntu: python3, python3-dev, python3-pip
+
+**pip packages**: psutil, packaging, pyparsing, pyperf, toml
 
 To run:
-```
-[root@hawkeye ~]# git clone https://github.com/redhat-performance/pyperf-wrapper
-[root@hawkeye ~]# pyperf-wrapper/pyperf/pyperf_run
-```
-
-The script will set the buffer sizes based on the hardware it is being executed on.
-
-```
-Options
-General options
-  --home_parent <value>: Our parent home directory.  If not set, defaults to current working directory.
-  --host_config <value>: default is the current host name.
-  --iterations <value>: Number of times to run the test, defaults to 1.
-  --pbench: use pbench-user-benchmark and place information into pbench, defaults to do not use.
-  --pbench_user <value>: user who started everything. Defaults to the current user.
-  --pbench_copy: Copy the pbench data, not move it.
-  --pbench_stats: What stats to gather. Defaults to all stats.
-  --run_label: the label to associate with the pbench run. No default setting.
-  --run_user: user that is actually running the test on the test system. Defaults to user running wrapper.
-  --sys_type: Type of system working with, aws, azure, hostname.  Defaults to hostname.
-  --sysname: name of the system running, used in determining config files.  Defaults to hostname.
-  --tuned_setting: used in naming the tar file, default for RHEL is the current active tuned.  For non
-    RHEL systems, default is none.
-  --usage: this usage message.
+```bash
+git clone https://github.com/redhat-performance/pyperf-wrapper
+cd pyperf-wrapper/pyperf
+./pyperf_run
 ```
 
-Note: The script does not install pbench for you.  You need to do that manually.
+The script will automatically detect your Python version and install all required dependencies.
+
+## The pyperformance Benchmark Suite
+
+pyperformance (https://github.com/python/pyperformance) is the official benchmark suite maintained by the Python project. It measures the performance of Python implementations using real-world application workloads rather than synthetic micro-benchmarks. The suite is built on top of the pyperf framework, which handles reliable benchmarking with warmup, calibration, and statistical analysis.
+
+### Benchmark Categories
+
+pyperformance includes 104 benchmarks across diverse application domains:
+
+#### Async and Concurrency
+async_generators, async_tree_cpu_io_mixed, async_tree_cpu_io_mixed_tg, async_tree_eager, async_tree_eager_cpu_io_mixed, async_tree_eager_cpu_io_mixed_tg, async_tree_eager_io, async_tree_eager_io_tg, async_tree_eager_memoization, async_tree_eager_memoization_tg, async_tree_eager_tg, async_tree_io, async_tree_io_tg, async_tree_memoization, async_tree_memoization_tg, async_tree_none, async_tree_none_tg, asyncio_tcp, asyncio_tcp_ssl, asyncio_websockets, coroutines, bench_mp_pool, bench_thread_pool
+
+#### Template and Web
+chameleon, django_template, genshi_text, genshi_xml, html5lib, mako, tornado_http
+
+#### Serialization and Parsing
+json_dumps, json_loads, tomli_loads, pickle, pickle_dict, pickle_list, pickle_pure_python, unpickle, unpickle_list, unpickle_pure_python, xml_etree_generate, xml_etree_iterparse, xml_etree_parse, xml_etree_process
+
+#### Scientific and Mathematical
+nbody, pidigits, scimark_fft, scimark_lu, scimark_monte_carlo, scimark_sor, scimark_sparse_mat_mult, spectral_norm, float
+
+#### Games and Algorithms
+fannkuch, go, hexiom, meteor_contest, nqueens, raytrace, richards, richards_super, deltablue, chaos
+
+#### Database
+dulwich_log, sqlite_synth, sqlalchemy_declarative, sqlalchemy_imperative, sqlglot_normalize, sqlglot_optimize, sqlglot_parse, sqlglot_transpile
+
+#### Text and String Processing
+2to3, docutils, regex_compile, regex_dna, regex_effbot, regex_v8, pprint_pformat, pprint_safe_repr
+
+#### Symbolic and Math Libraries
+sympy_expand, sympy_integrate, sympy_str, sympy_sum
+
+#### Startup and Runtime
+python_startup, python_startup_no_site, create_gc_cycles, gc_traversal, logging_format, logging_silent, logging_simple
+
+#### Deep Copy and Comprehensions
+comprehensions, deepcopy, deepcopy_memo, deepcopy_reduce, unpack_sequence, generators
+
+#### Crypto, Coverage, and Miscellaneous
+crypto_pyaes, coverage, dask, mdp, pathlib, pyflate, telco, typing_runtime_protocols
+
+### Key Concepts
+
+1. **Execution Model**: Each benchmark runs multiple times with warmup iterations. The pyperf framework handles calibration automatically to produce statistically reliable results.
+
+2. **Copies/Concurrency**: Unlike HPL or SPEC CPU, pyperformance benchmarks run sequentially (single-threaded per benchmark). The suite measures per-benchmark execution time, not parallel throughput.
+
+3. **Virtual Environment**: pyperformance creates and manages its own virtual environment to isolate benchmark dependencies from the system Python environment.
+
+4. **Performance Metric**: Results are reported as average execution time per benchmark. Lower values indicate better performance. The wrapper converts all results to seconds for consistency.
+
+## Output Files
+
+The `python_results/` directory contains:
+
+- **pyperf_out_\<timestamp\>.json**: Raw pyperformance JSON output containing all benchmark runs with statistical data.
+- **pyperf_out_\<timestamp\>.results**: Human-readable pyperf dump output showing per-run values for each benchmark.
+- **pyperf_out_\<timestamp\>.csv**: Processed CSV file with averaged results (Test, Avg, Unit, Start_Date, End_Date).
+- **pyperf.json**: Final validated JSON results checked against the Pydantic schema.
+- **/tmp/pyperf.out**: Complete execution log capturing all wrapper output.
+- **PCP data** (if `--use_pcp` option used): Performance Co-Pilot monitoring data with per-benchmark metric values.
+
+## Examples
+
+### Basic run with defaults
+```bash
+./pyperf_run
+```
+This runs with:
+- pyperformance version 1.11.0
+- System default python3
+- All benchmarks
+- 1 iteration
+- Automatic dependency installation
+
+### Run with a specific pyperformance version
+```bash
+./pyperf_run --pyperf_version 1.12.0
+```
+Installs and runs pyperformance version 1.12.0 instead of the default.
+
+### Run with a specific Python executable
+```bash
+./pyperf_run --python_exec /usr/bin/python3.12
+```
+Uses a specific Python interpreter for running benchmarks.
+
+### Run specific benchmarks only
+```bash
+./pyperf_run --pyperf_benchmarks "2to3,nbody,go,float,richards"
+```
+Runs only the specified benchmarks instead of the full suite.
+
+### Run multiple iterations (via external harness)
+```bash
+./pyperf_run --iterations 3
+```
+The `--iterations` option is parsed by the general_setup framework and may be used by external harnesses (e.g., pbench) to repeat the run. The script itself executes a single pyperformance invocation per call.
+
+### Run with PCP monitoring
+```bash
+./pyperf_run --use_pcp
+```
+Collects Performance Co-Pilot data during the run, with per-benchmark metric tracking.
+
+### Run with pbench integration
+```bash
+./pyperf_run --pbench --pbench_user testuser --run_label myrun
+```
+Wraps execution with pbench-user-benchmark for centralized performance data collection.
+
+### Install pip before running
+```bash
+./pyperf_run --install_pip
+```
+**Note**: The `--install_pip` flag is parsed but the `pip3_install()` function that checks it is currently not called in the main flow. pip must be available for `package_tool` to install pyperformance. Install `python3-pip` via your package manager if pip is not present.
+
+### Combination example
+```bash
+./pyperf_run --pyperf_version 1.11.0 --python_exec /usr/bin/python3.12 \
+    --pyperf_benchmarks "nbody,float,scimark_fft,scimark_lu" \
+    --use_pcp
+```
+Runs selected scientific benchmarks with Python 3.12, pyperformance 1.11.0, and PCP monitoring.
+
+## How Result Processing Works
+
+### Unit Conversion and Averaging
+
+The wrapper processes raw pyperf dump output through several conversion steps to produce consistent results:
+
+1. **Parsing**: Reads the pyperf dump output, which contains per-run timing values for each benchmark.
+2. **Unit Normalization**: Converts all intermediate values to nanoseconds using the convert_val utility from test_tools. This preserves precision during averaging.
+3. **Averaging**: Calculates the arithmetic mean across all runs for each benchmark: `average = sum_of_values / run_count`.
+4. **Final Conversion**: Converts averaged nanosecond values to seconds for the output CSV.
+
+This two-stage conversion (to nanoseconds for calculation, to seconds for output) avoids floating-point precision loss that would occur when averaging very small time values directly.
+
+### CSV Output Format
+
+The generated CSV contains one row per benchmark:
+
+| Column | Description |
+|--------|-------------|
+| Test | Benchmark name (e.g., `2to3`, `nbody`) |
+| Avg | Average execution time in seconds |
+| Unit | Time unit (always `sec` in final output) |
+| Start_Date | Timestamp when the benchmark run started |
+| End_Date | Timestamp when the benchmark run completed |
+
+## How Virtual Environment Setup Works
+
+pyperformance manages its own virtual environment to isolate benchmark dependencies:
+
+1. The wrapper calls `python3 -m pyperformance venv create` to create the venv.
+2. The venv path is retrieved via `python3 -m pyperformance venv show`.
+3. For pyperformance versions <= 1.11.0, a setuptools compatibility fix is applied:
+   - setuptools v82.0.0 removed `pkg_resources`, which breaks several benchmarks.
+   - The wrapper downgrades setuptools to v81.0.0 inside the venv.
+   - This is done using the venv's own Python: `<venv>/bin/python3 -m pip install --upgrade setuptools==81.0.0`.
+
+## PCP Metrics
+
+When `--use_pcp` is enabled, the wrapper tracks the following Performance Co-Pilot metrics:
+
+- **Generic metrics**: iteration, running, numthreads, runtime, throughput, latency
+- **Per-benchmark metrics**: One metric per benchmark prefixed with `pyperf_` (e.g., `pyperf_2to3`, `pyperf_nbody`, `pyperf_go`) — 90 benchmark metrics defined in the reset file.
+
+Metrics are initialized to NaN before execution and updated with actual averaged timing values as results become available.
+
+## Return Codes
+
+The script uses standardized error codes from the test_tools error_codes module:
+
+- **0**: Success
+- **101**: Git clone failure (test_tools-wrappers download)
+- **E_USAGE**: Invalid arguments or usage errors
+- **E_GENERAL**: General execution errors including:
+  - Python executable not found
+  - Package installation failures
+  - Invalid benchmark names
+  - pyperformance venv creation failures
+  - CSV-to-JSON conversion failures
+  - Schema validation failures
+
+The exit code from verify_results (schema validation) is propagated as the final return code when result processing fails.
+
+## Notes
+
+### Architecture Support
+- **x86_64**: Full support for AMD and Intel CPUs.
+- **aarch64**: Full support for ARM CPUs using the same dependency configuration.
+
+### Python Version Compatibility
+- The wrapper works with any Python 3 interpreter available on the system.
+- Use `--python_exec` to target a specific Python version (e.g., python3.11, python3.12).
+- Python development headers (python3-devel/python3-dev) are required for compiling C extension benchmarks.
+
+### pyperformance Version Selection
+- Default version is 1.11.0.
+- Use `--pyperf_version` to test with different pyperformance releases.
+- Versions <= 1.11.0 receive automatic setuptools compatibility fixes.
+- Newer versions may add or remove benchmarks; the schema validates against known benchmark names.
+
+### Benchmark Selection
+- By default, all benchmarks in the pyperformance suite are executed.
+- Use `--pyperf_benchmarks` with a comma-separated list to run specific benchmarks.
+- Benchmark names are validated against the pyperformance installation before execution.
+- Running the full suite takes significant time (30+ minutes depending on hardware).
+
+### Special Cases
+- **setuptools v82.0.0**: Removed `pkg_resources`, breaking benchmarks that depend on it. The wrapper automatically downgrades setuptools to v81.0.0 in the pyperformance venv for affected versions.
+- **Ubuntu**: Requires the `python3-lib2to3` package for the 2to3 benchmark, which is not bundled with Python on Ubuntu.
+- **pip availability**: The `--install_pip` flag exists but the `pip3_install()` function that checks it is not invoked in the current script flow. Ensure `python3-pip` is installed via your system package manager before running the wrapper.
+
+### Performance Tips
+- Run multiple iterations to verify consistency, as Python benchmark variance can be significant.
+- Ensure the system is idle (no competing workloads) for best results.
+- Disable CPU frequency scaling (use performance governor) for reproducible results.
+- Consider the active tuned profile on RHEL systems.
+- Use `--use_pcp` to collect detailed system-level performance counters alongside benchmark timings.
+- For quick regression testing, select a subset of representative benchmarks instead of the full suite.
+
+### Troubleshooting
+- **Python executable not found**: Verify the path specified with `--python_exec` exists and is executable. Run `which python3` to find available interpreters.
+- **pip installation failures**: Install `python3-pip` via your system package manager. The `--install_pip` flag exists but is not active in the current script flow.
+- **Benchmark validation errors**: Run `python3 -m pyperformance list` to see available benchmarks for the installed version. Benchmark names may differ between pyperformance versions.
+- **setuptools errors**: If benchmarks fail with `pkg_resources` import errors, the automatic setuptools downgrade may not have applied. Check the venv path and manually install setuptools==81.0.0.
+- **Schema validation failures**: If new benchmarks are added in newer pyperformance versions, the schema (pyperf_schema.py) may need updating with the new benchmark names.
+- **Low or inconsistent results**: Python benchmarks are sensitive to system load, CPU frequency, and memory pressure. Ensure the system is idle and CPU governor is set to "performance".
+- **pbench not found**: Ensure pbench is installed and configured if using `--pbench`. The wrapper assumes pbench-user-benchmark is in PATH.
