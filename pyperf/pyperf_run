@@ -50,7 +50,7 @@ usage()
 {
 	echo "$1 Usage:"
 	echo "--pyperf_version <version number>: Version of pyperf to run, default is $PYPERF_VERSION."
-	echo "--python_exec_path: Python to set via alternatives"
+	echo "--python_exec <path>: Python executable to use for running benchmarks, default is python3."
 	echo "--python_pkgs: comma seprated list of python packages to install"
 	echo "--pyperf_benchmarks: Comma separated list of pyperformance benchmarks to run.  Default is to run all tests."
 	source $TOOLS_BIN/general_setup --usage

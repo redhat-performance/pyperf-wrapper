@@ -188,9 +188,12 @@ The `python_results/` directory contains:
 - **pyperf_out_\<timestamp\>.json**: Raw pyperformance JSON output containing all benchmark runs with statistical data.
 - **pyperf_out_\<timestamp\>.results**: Human-readable pyperf dump output showing per-run values for each benchmark.
 - **pyperf_out_\<timestamp\>.csv**: Processed CSV file with averaged results (Test, Avg, Unit, Start_Date, End_Date).
+- **PCP data** (if `--use_pcp` option used): Performance Co-Pilot monitoring data with per-benchmark metric values.
+
+Other output files (written to the working directory):
+
 - **pyperf.json**: Final validated JSON results checked against the Pydantic schema.
 - **/tmp/pyperf.out**: Complete execution log capturing all wrapper output.
-- **PCP data** (if `--use_pcp` option used): Performance Co-Pilot monitoring data with per-benchmark metric values.
 
 ## Examples
 
@@ -213,9 +216,9 @@ Installs and runs pyperformance version 1.12.0 instead of the default.
 
 ### Run with a specific Python executable
 ```bash
-./pyperf_run --python_exec /usr/bin/python3.12
+./pyperf_run --python_exec /usr/bin/python3
 ```
-Uses a specific Python interpreter for running benchmarks.
+Uses a specific Python interpreter for running benchmarks. The executable's basename must have a matching `python_deps/<basename>.json` file (e.g., `python_deps/python3.json` for `python3`).
 
 ### Run specific benchmarks only
 ```bash
