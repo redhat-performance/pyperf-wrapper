@@ -13,7 +13,7 @@ The wrapper provides:
 - Result collection, CSV/JSON processing, and Pydantic schema validation.
 - System configuration metadata capture.
 - Integration with test_tools framework.
-- Optional Performance Co-Pilot (PCP) and pbench integration.
+- Optional Performance Co-Pilot (PCP) integration.
 
 ## Command-Line Options
 
@@ -29,17 +29,20 @@ pyperf Options:
   --install_pip: Install pip if not available on the system (requires pip3_install integration).
 
 General test_tools options:
+  --debug: Enables bash -x output, useful for debugging issues with wrappers.
   --home_parent <value>: Parent home directory. If not set, defaults to current working directory.
   --host_config <value>: Host configuration name, defaults to current hostname.
   --iterations <value>: Number of times to run the test, defaults to 1.
-  --pbench: Enable pbench-user-benchmark integration.
-  --pbench_user <user>: User who started the pbench test.
-  --pbench_copy: Copy pbench data instead of moving it.
-  --pbench_stats <stats>: Pbench statistics to gather.
-  --run_label <name>: Label for pbench run identification.
+  --iteration_default <value>: Value to set iterations to, if default is not set.
+  --no_system_packages: Do not install system packages via the system package manager.
+  --no_pip_packages: Do not install python pip packages via pip.
+  --no_pkg_install: Test is not to install any packages.
   --run_user: User that is actually running the test on the test system. Defaults to current user.
   --sys_type: Type of system working with (aws, azure, hostname). Defaults to hostname.
   --sysname: Name of the system running, used in determining config files. Defaults to hostname.
+  --test_tools_release <tag>: Version tag of test tools to use.
+  --json_skip: Skip JSON conversion of test CSV results, default is 0.
+  --verify_skip: Skip test verifications against output, default is 0.
   --tuned_setting: Used in naming the results directory. For RHEL, defaults to current active tuned profile.
       For non-RHEL systems, defaults to 'none'.
   --use_pcp: Enable Performance Co-Pilot monitoring during test execution.
@@ -230,19 +233,13 @@ Runs only the specified benchmarks instead of the full suite.
 ```bash
 ./pyperf_run --iterations 3
 ```
-The `--iterations` option is parsed by the general_setup framework and may be used by external harnesses (e.g., pbench) to repeat the run. The script itself executes a single pyperformance invocation per call.
+The `--iterations` option is parsed by the general_setup framework and may be used by external harnesses to repeat the run. The script itself executes a single pyperformance invocation per call.
 
 ### Run with PCP monitoring
 ```bash
 ./pyperf_run --use_pcp
 ```
 Collects Performance Co-Pilot data during the run, with per-benchmark metric tracking.
-
-### Run with pbench integration
-```bash
-./pyperf_run --pbench --pbench_user testuser --run_label myrun
-```
-Wraps execution with pbench-user-benchmark for centralized performance data collection.
 
 ### Install pip before running
 ```bash
@@ -252,11 +249,11 @@ Wraps execution with pbench-user-benchmark for centralized performance data coll
 
 ### Combination example
 ```bash
-./pyperf_run --pyperf_version 1.11.0 --python_exec /usr/bin/python3.12 \
+./pyperf_run --pyperf_version 1.11.0 --python_exec /usr/bin/python3 \
     --pyperf_benchmarks "nbody,float,scimark_fft,scimark_lu" \
     --use_pcp
 ```
-Runs selected scientific benchmarks with Python 3.12, pyperformance 1.11.0, and PCP monitoring.
+Runs selected scientific benchmarks with pyperformance 1.11.0 and PCP monitoring.
 
 ## How Result Processing Works
 
@@ -327,8 +324,8 @@ The exit code from verify_results (schema validation) is propagated as the final
 - **aarch64**: Full support for ARM CPUs using the same dependency configuration.
 
 ### Python Version Compatibility
-- The wrapper works with any Python 3 interpreter available on the system.
-- Use `--python_exec` to target a specific Python version (e.g., python3.11, python3.12).
+- The wrapper works with Python 3 interpreters that have a matching `python_deps/<basename>.json` file. By default, only `python3` is supported.
+- Use `--python_exec` to specify a different Python executable. To support additional versions (e.g., python3.12), create a corresponding `python_deps/python3.12.json` dependency file.
 - Python development headers (python3-devel/python3-dev) are required for compiling C extension benchmarks.
 
 ### pyperformance Version Selection
@@ -363,4 +360,3 @@ The exit code from verify_results (schema validation) is propagated as the final
 - **setuptools errors**: If benchmarks fail with `pkg_resources` import errors, the automatic setuptools downgrade may not have applied. Check the venv path and manually install setuptools==81.0.0.
 - **Schema validation failures**: If new benchmarks are added in newer pyperformance versions, the schema (pyperf_schema.py) may need updating with the new benchmark names.
 - **Low or inconsistent results**: Python benchmarks are sensitive to system load, CPU frequency, and memory pressure. Ensure the system is idle and CPU governor is set to "performance".
-- **pbench not found**: Ensure pbench is installed and configured if using `--pbench`. The wrapper assumes pbench-user-benchmark is in PATH.
