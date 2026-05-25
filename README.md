@@ -114,13 +114,9 @@ The `pyperf_run` script performs the following workflow:
 
 **pyperformance**: Installed automatically via pip at the specified version (default: 1.11.0) from PyPI.
 
-**RHEL / Amazon Linux packages**: bc, git, zip, unzip, numactl, perf, wget
+**RHEL / Amazon Linux packages**: bc, git, zip, unzip, numactl, perf, wget, python3, python3-devel, python3-pip
 
-**Ubuntu packages**: bc, git, python3-lib2to3, zip, unzip, numactl, python3-pip, wget
-
-**Python runtime packages** (all distributions):
-- RHEL/Amazon Linux: python3, python3-devel, python3-pip
-- Ubuntu: python3, python3-dev, python3-pip
+**Ubuntu packages**: bc, git, python3-lib2to3, zip, unzip, numactl, python3-pip, wget, python3, python3-dev
 
 **pip packages**: psutil, packaging, pyparsing, pyperf, toml
 
@@ -137,42 +133,13 @@ The script will automatically detect your Python version and install all require
 
 pyperformance (https://github.com/python/pyperformance) is the official benchmark suite maintained by the Python project. It measures the performance of Python implementations using real-world application workloads rather than synthetic micro-benchmarks. The suite is built on top of the pyperf framework, which handles reliable benchmarking with warmup, calibration, and statistical analysis.
 
-### Benchmark Categories
+### Benchmarks
 
-pyperformance includes 104 benchmarks across diverse application domains:
+For the full list of benchmarks included in the default pyperformance version (1.11.0), see the [pyperformance benchmark documentation](https://pyperformance.readthedocs.io/benchmarks.html). You can also list available benchmarks locally by running:
 
-#### Async and Concurrency
-async_generators, async_tree_cpu_io_mixed, async_tree_cpu_io_mixed_tg, async_tree_eager, async_tree_eager_cpu_io_mixed, async_tree_eager_cpu_io_mixed_tg, async_tree_eager_io, async_tree_eager_io_tg, async_tree_eager_memoization, async_tree_eager_memoization_tg, async_tree_eager_tg, async_tree_io, async_tree_io_tg, async_tree_memoization, async_tree_memoization_tg, async_tree_none, async_tree_none_tg, asyncio_tcp, asyncio_tcp_ssl, asyncio_websockets, coroutines, bench_mp_pool, bench_thread_pool
-
-#### Template and Web
-chameleon, django_template, genshi_text, genshi_xml, html5lib, mako, tornado_http
-
-#### Serialization and Parsing
-json_dumps, json_loads, tomli_loads, pickle, pickle_dict, pickle_list, pickle_pure_python, unpickle, unpickle_list, unpickle_pure_python, xml_etree_generate, xml_etree_iterparse, xml_etree_parse, xml_etree_process
-
-#### Scientific and Mathematical
-nbody, pidigits, scimark_fft, scimark_lu, scimark_monte_carlo, scimark_sor, scimark_sparse_mat_mult, spectral_norm, float
-
-#### Games and Algorithms
-fannkuch, go, hexiom, meteor_contest, nqueens, raytrace, richards, richards_super, deltablue, chaos
-
-#### Database
-dulwich_log, sqlite_synth, sqlalchemy_declarative, sqlalchemy_imperative, sqlglot_normalize, sqlglot_optimize, sqlglot_parse, sqlglot_transpile
-
-#### Text and String Processing
-2to3, docutils, regex_compile, regex_dna, regex_effbot, regex_v8, pprint_pformat, pprint_safe_repr
-
-#### Symbolic and Math Libraries
-sympy_expand, sympy_integrate, sympy_str, sympy_sum
-
-#### Startup and Runtime
-python_startup, python_startup_no_site, create_gc_cycles, gc_traversal, logging_format, logging_silent, logging_simple
-
-#### Deep Copy and Comprehensions
-comprehensions, deepcopy, deepcopy_memo, deepcopy_reduce, unpack_sequence, generators
-
-#### Crypto, Coverage, and Miscellaneous
-crypto_pyaes, coverage, dask, mdp, pathlib, pyflate, telco, typing_runtime_protocols
+```bash
+python3 -m pyperformance list
+```
 
 ### Key Concepts
 
@@ -304,16 +271,23 @@ Metrics are initialized to NaN before execution and updated with actual averaged
 
 The script uses standardized error codes from the test_tools error_codes module:
 
-- **0**: Success
-- **101**: Git clone failure (test_tools-wrappers download)
-- **E_USAGE**: Invalid arguments or usage errors
-- **E_GENERAL**: General execution errors including:
+- **0 (E_SUCCESS)**: Success
+- **1 (E_PACKAGE_TOOL_PACKAGING)**: Package tool packaging error
+- **101 (E_GENERAL)**: General execution errors including:
+  - Git clone failure (test_tools-wrappers download)
   - Python executable not found
   - Package installation failures
   - Invalid benchmark names
   - pyperformance venv creation failures
   - CSV-to-JSON conversion failures
   - Schema validation failures
+- **102 (E_PACKAGE_TOOL_NO_REMOVE)**: Package tool removal error
+- **103 (E_USAGE)**: Invalid arguments or usage errors
+- **104 (E_PARSE_ARGS)**: Argument parsing error
+- **105 (E_PCP_FAILURE)**: PCP monitoring failure
+- **106 (E_INVAL_DATA)**: Invalid data
+- **107 (E_NO_ARGS)**: Missing required arguments
+- **127 (E_NO_CMD)**: Command not found
 
 The exit code from verify_results (schema validation) is propagated as the final return code when result processing fails.
 
