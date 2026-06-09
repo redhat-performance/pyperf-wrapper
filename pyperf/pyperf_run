@@ -400,9 +400,6 @@ PYTHON_VERSION=$($python_exec --version | awk '{ print $2 }')
 if [[ ${python_pkgs} != "" ]]; then
 	pkg_list="--packages `echo $python_pkgs | sed "s/,/ /g"`"
 fi
-if ! command -v $python_exec; then
-	exit_out "Error: Designated python executable, $python_exec, not present" $E_GENERAL
-fi
 
 if [[  $to_no_pkg_install -eq 0 ]]; then
 	python_bin_name=$(basename $python_exec)
