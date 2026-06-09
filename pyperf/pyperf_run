@@ -392,6 +392,10 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
+if ! command -v "$python_exec" > /dev/null; then
+	exit_out "Error: $python_exec either doesn't exist or is not executable!" $E_GENERAL
+fi
+
 PYTHON_VERSION=$($python_exec --version | awk '{ print $2 }')
 if [[ ${python_pkgs} != "" ]]; then
 	pkg_list="--packages `echo $python_pkgs | sed "s/,/ /g"`"
