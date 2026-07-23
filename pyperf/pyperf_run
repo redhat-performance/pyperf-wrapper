@@ -34,8 +34,7 @@ base_dir=$(dirname $(realpath $0))
 #
 # To make sure.
 #
-exit_out()
-{
+exit_out() {
 	if [[ $to_use_pcp -eq 1 ]]; then
 		stop_pcp_subset
 		stop_pcp
@@ -46,24 +45,22 @@ exit_out()
 	exit $2
 }
 
-usage()
-{
+usage() {
 	echo "$1 Usage:"
 	echo "--pyperf_version <version number>: Version of pyperf to run, default is $PYPERF_VERSION."
 	echo "--python_exec <path>: Python executable to use for running benchmarks, default is python3."
 	echo "--python_pkgs: comma seprated list of python packages to install"
 	echo "--pyperf_benchmarks: Comma separated list of pyperformance benchmarks to run.  Default is to run all tests."
 	source $TOOLS_BIN/general_setup --usage
-        exit $E_USAGE
+	exit $E_USAGE
 }
 
-verify_benchmark_names()
-{
+verify_benchmark_names() {
 	benchmark_file=$(mktemp pyperf_benchmarks.XXXXX)
-	$python_exec -m pyperformance list | head -n -2 | tail -n +2 | sed -e 's/- //g' > $benchmark_file
+	$python_exec -m pyperformance list | head -n -2 | tail -n +2 | sed -e 's/- //g' >$benchmark_file
 	invalid_benchmarks=""
 	for benchmark in $(echo $benchmarks | tr ',' ' '); do
-		grep $benchmark $benchmark_file > /dev/null
+		grep $benchmark $benchmark_file >/dev/null
 
 		if [[ $? -ne 0 ]]; then
 			invalid_benchmarks="$benchmark $invalid_benchmarks"
@@ -77,13 +74,12 @@ verify_benchmark_names()
 	fi
 }
 
-setup_pyperformance()
-{
+setup_pyperformance() {
 	major=$(echo $PYPERF_VERSION | cut -d. -f1)
 	minor=$(echo $PYPERF_VERSION | cut -d. -f2)
 
 	$python_exec -m pyperformance venv create
-	venv_path=$($python_exec -m pyperformance venv show | sed -e "s/Virtual environment path: //g" -e "s/ (already created)//" )
+	venv_path=$($python_exec -m pyperformance venv show | sed -e "s/Virtual environment path: //g" -e "s/ (already created)//")
 
 	if [[ -z "$venv_path" ]]; then
 		exit_out "Error: Could not determine pyperformance venv path, exiting" $E_GENERAL
@@ -101,42 +97,38 @@ setup_pyperformance()
 	fi
 }
 
-attempt_tools_wget()
-{
-        if [[ ! -d "$TOOLS_BIN" ]]; then
-                wget ${tools_git}/archive/refs/heads/main.zip
-                if [[ $? -eq 0 ]]; then
-                        unzip -q main.zip
-                        mv test_tools-wrappers-main ${TOOLS_BIN}
-                        rm main.zip
-                fi
-        fi
+attempt_tools_wget() {
+	if [[ ! -d "$TOOLS_BIN" ]]; then
+		wget ${tools_git}/archive/refs/heads/main.zip
+		if [[ $? -eq 0 ]]; then
+			unzip -q main.zip
+			mv test_tools-wrappers-main ${TOOLS_BIN}
+			rm main.zip
+		fi
+	fi
 }
 
-attempt_tools_curl()
-{
-        if [[ ! -d "$TOOLS_BIN" ]]; then
-                curl -L -O ${tools_git}/archive/refs/heads/main.zip
-                if [[ $? -eq 0 ]]; then
-                        unzip -q main.zip
-                        mv test_tools-wrappers-main ${TOOLS_BIN}
-                        rm main.zip
-                fi
-        fi
+attempt_tools_curl() {
+	if [[ ! -d "$TOOLS_BIN" ]]; then
+		curl -L -O ${tools_git}/archive/refs/heads/main.zip
+		if [[ $? -eq 0 ]]; then
+			unzip -q main.zip
+			mv test_tools-wrappers-main ${TOOLS_BIN}
+			rm main.zip
+		fi
+	fi
 }
 
-attempt_tools_git()
-{
-        if [[ ! -d "$TOOLS_BIN" ]]; then
-                git clone $tools_git "$TOOLS_BIN"
-                if [ $? -ne 0 ]; then
-                        exit_out "Error: pulling git $tools_git failed." 101
-                fi
-        fi
+attempt_tools_git() {
+	if [[ ! -d "$TOOLS_BIN" ]]; then
+		git clone $tools_git "$TOOLS_BIN"
+		if [ $? -ne 0 ]; then
+			exit_out "Error: pulling git $tools_git failed." 101
+		fi
+	fi
 }
 
-install_tools()
-{
+install_tools() {
 	show_usage=0
 	#
 	# Clone the repo that contains the common code and tools
@@ -176,8 +168,7 @@ install_tools()
 	fi
 }
 
-generate_csv_file()
-{
+generate_csv_file() {
 	instance=0
 	float=0
 	ivalue=0
@@ -192,9 +183,7 @@ generate_csv_file()
 
 	$TOOLS_BIN/test_header_info --front_matter --results_file "${1}.csv" --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version "py${PYTHON_VERSION}_$PYPERF_VERSION" --test_name $test_name_run --field_header "Test,Avg,Unit"
 
-
-	while IFS= read -r line
-	do
+	while IFS= read -r line; do
 		if [[ $test_name == "" ]]; then
 			test_name=$line
 			continue
@@ -210,9 +199,9 @@ generate_csv_file()
 					#
 					# Timings is in seconds
 					#
-					sec_results=$(${TOOLS_BIN}/convert_val --time_val --from_unit  ns --to_unit secs --value $results --float --no_unit)
-					printf "%s,%.9f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >> ${1}.csv
-					
+					sec_results=$(${TOOLS_BIN}/convert_val --time_val --from_unit ns --to_unit secs --value $results --float --no_unit)
+					printf "%s,%.9f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >>${1}.csv
+
 					if [[ $to_use_pcp -eq 1 ]]; then
 						metric_name="pyperf_${test_name}"
 						result2pcp "$metric_name" "${sec_results}"
@@ -228,20 +217,20 @@ generate_csv_file()
 		if [[ $line == *"--"* ]] || [[ $line == *"calibrate"* ]] || [[ $line == *"warmup"* ]] || [[ $line != *"value"* ]]; then
 			continue
 		fi
-		value=`echo $line | cut -d' ' -f 4`
-		unit=`echo $line | cut -d' ' -f 5`
-		cnv_val=$($TOOLS_BIN/convert_val --time_val --from_unit  $unit --to_unit ns --value $value --no_unit)
+		value=$(echo $line | cut -d' ' -f 4)
+		unit=$(echo $line | cut -d' ' -f 5)
+		cnv_val=$($TOOLS_BIN/convert_val --time_val --from_unit $unit --to_unit ns --value $value --no_unit)
 		let "res_count=${res_count}+1"
-		value_sum=`echo "${cnv_val}+${value_sum}" | bc`
-	done < "${1}.results"
+		value_sum=$(echo "${cnv_val}+${value_sum}" | bc)
+	done <"${1}.results"
 
 	if [[ $test_name != *"WARNING:"* ]]; then
-		results=$(echo "${value_sum}/${res_count}" | bc | cut -d'.' -f1 )
+		results=$(echo "${value_sum}/${res_count}" | bc | cut -d'.' -f1)
 		#
 		# Timings is in seconds
 		#
-		sec_results=$(${TOOLS_BIN}/convert_val --time_val --from_unit  ns --to_unit secs --value $results --float --no_unit)
-		printf "%s,%.9f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >> ${1}.csv
+		sec_results=$(${TOOLS_BIN}/convert_val --time_val --from_unit ns --to_unit secs --value $results --float --no_unit)
+		printf "%s,%.9f,sec,%s,%s\n" $test_name $sec_results $start_time $end_time >>${1}.csv
 
 		if [[ $to_use_pcp -eq 1 ]]; then
 			metric_name="pyperf_${test_name}"
@@ -250,15 +239,14 @@ generate_csv_file()
 	fi
 }
 
-pip3_install()
-{
+pip3_install() {
 	if [ $to_no_pkg_install -eq 1 ]; then
 		return
 	fi
 
 	$python_exec -m pip --version
 	if [[ $? -ne 0 ]]; then
-			if [[ $install_pip -eq 1 ]]; then
+		if [[ $install_pip -eq 1 ]]; then
 			$python_exec -m ensurepip || exit_out "Failed to install pip." $E_GENERAL
 		else
 			exit_out "Pip is not available, exiting out" $E_GENERAL
@@ -288,22 +276,22 @@ install_tools $0
 test_name_run="pyperf"
 arguments="$@"
 
-curdir=`pwd`
+curdir=$(pwd)
 
 if [[ $0 == "./"* ]]; then
-	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
+	chars=$(echo $0 | awk -v RS='/' 'END{print NR-1}')
 	if [[ $chars == 1 ]]; then
-		run_dir=`pwd`
+		run_dir=$(pwd)
 	else
-		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
+		run_dir=$(echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-)
 		run_dir="${curdir}${run_dir}"
 	fi
 elif [[ $0 != "/"* ]]; then
-	dir=`echo $0 | rev | cut -d'/' -f2- | rev`
+	dir=$(echo $0 | rev | cut -d'/' -f2- | rev)
 	run_dir="${curdir}/${dir}"
 else
-	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
-	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+	chars=$(echo $0 | awk -v RS='/' 'END{print NR-1}')
+	run_dir=$(echo $0 | cut -d'/' -f 1-${chars})
 	if [[ $run_dir != "/"* ]]; then
 		run_dir=${curdir}/${run_dir}
 	fi
@@ -320,9 +308,9 @@ if [ -d "workloads" ]; then
 	# to /mnt.  Which is done due to azure having a very small
 	# user space.
 	#
-	start_dir=`pwd`
+	start_dir=$(pwd)
 	cd workloads
-	for file in `ls ${start_dir}`; do
+	for file in $(ls ${start_dir}); do
 		if [[ ! -f $file ]] && [[ ! -d $file ]]; then
 			ln -s $start_dir/$file .
 		fi
@@ -344,50 +332,51 @@ NO_ARGUMENTS=(
 )
 
 # read arguments
-opts=$(getopt \
-	--longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
-        --longoptions "$(printf "%s," "${NO_ARGUMENTS[@]}")" \
-        --name "$(basename "$0")" \
-        --options "h" \
-        -- "$@"
+opts=$(
+	getopt \
+		--longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
+		--longoptions "$(printf "%s," "${NO_ARGUMENTS[@]}")" \
+		--name "$(basename "$0")" \
+		--options "h" \
+		-- "$@"
 )
 
 eval set --$opts
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
-		--pyperf_version)
-			PYPERF_VERSION=$2
-			shift 2
+	--pyperf_version)
+		PYPERF_VERSION=$2
+		shift 2
 		;;
-		--python_exec)
-			python_exec=$2
-			shift 2
+	--python_exec)
+		python_exec=$2
+		shift 2
 		;;
-		--python_pkgs)
-			python_pkgs=$2
-			shift 2
+	--python_pkgs)
+		python_pkgs=$2
+		shift 2
 		;;
-		--install_pip)
-			install_pip=1
-			shift 1
+	--install_pip)
+		install_pip=1
+		shift 1
 		;;
-		--pyperf_benchmarks)
-			benchmarks=$2
-			shift 2
+	--pyperf_benchmarks)
+		benchmarks=$2
+		shift 2
 		;;
-		--usage)
-			usage $0
+	--usage)
+		usage $0
 		;;
-		-h)
-			usage $0
+	-h)
+		usage $0
 		;;
-		--)
-			break
+	--)
+		break
 		;;
-		*)
-			echo option not found $1
-			usage $0
+	*)
+		echo option not found $1
+		usage $0
 		;;
 	esac
 done
@@ -398,10 +387,10 @@ fi
 
 PYTHON_VERSION=$($python_exec --version | awk '{ print $2 }')
 if [[ ${python_pkgs} != "" ]]; then
-	pkg_list="--packages `echo $python_pkgs | sed "s/,/ /g"`"
+	pkg_list="--packages $(echo $python_pkgs | sed "s/,/ /g")"
 fi
 
-if [[  $to_no_pkg_install -eq 0 ]]; then
+if [[ $to_no_pkg_install -eq 0 ]]; then
 	python_bin_name=$(basename $python_exec)
 	python_dep_file="$base_dir/../python_deps/$python_bin_name.json"
 	if [[ ! -f "$python_dep_file" ]]; then
@@ -421,7 +410,7 @@ if [[  $to_no_pkg_install -eq 0 ]]; then
 	fi
 fi
 
-cpus=`cat /proc/cpuinfo | grep processor | wc -l`
+cpus=$(cat /proc/cpuinfo | grep processor | wc -l)
 cous=1
 mkdir python_results
 
@@ -446,14 +435,14 @@ fi
 setup_pyperformance
 
 start_time=$(retrieve_time_stamp)
-$python_exec -m pyperformance run --output  ${pyresults}.json $pyperf_flags
+$python_exec -m pyperformance run --output ${pyresults}.json $pyperf_flags
 if [ $? -ne 0 ]; then
 	exit_out "Failed: $python_exec -m pyperformance run --output  ${pyresults}.json" $E_GENERAL
 fi
 end_time=$(retrieve_time_stamp)
 
-$python_exec -m pyperf dump  ${pyresults}.json > ${pyresults}.results
-if [[ $?  -ne 0 ]]; then
+$python_exec -m pyperf dump ${pyresults}.json >${pyresults}.results
+if [[ $? -ne 0 ]]; then
 	exit_out "Error: $python_exec -m pyperf dump  ${pyresults}.json" $E_GENERAL
 fi
 
@@ -469,7 +458,6 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	shutdown_pcp
 fi
 
-
 if [[ ! -z "$copy_dirs" ]]; then
 	copy_dirs="--copy_dir $copy_dirs"
 fi
@@ -477,5 +465,5 @@ fi
 #
 # Process the data.
 #
-${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*" $copy_dirs
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*" $copy_dirs
 exit $rtc
