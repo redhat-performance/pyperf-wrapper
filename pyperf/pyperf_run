@@ -423,9 +423,10 @@ fi
 
 cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 cous=1
-mkdir python_results
+results_dir="/tmp/python_results_$(date "+%Y.%m.%d-%H.%M.%S")"
+mkdir $results_dir
 
-pyresults=python_results/pyperf_out_$(date "+%Y.%m.%d-%H.%M.%S")
+pyresults=$results_dir/pyperf_out
 
 if [[ $to_use_pcp -eq 1 ]]; then
 	source $TOOLS_BIN/pcp/pcp_commands.inc
@@ -477,5 +478,5 @@ fi
 #
 # Process the data.
 #
-${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "python_results/*" $copy_dirs
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results /tmp/pyperf.out  --test_name pyperf --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "$results_dir/*" $copy_dirs
 exit $rtc
